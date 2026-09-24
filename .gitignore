@@ -1,0 +1,12 @@
+# secrets
+.env
+
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# tooling
+.eslintcache
+*.log
