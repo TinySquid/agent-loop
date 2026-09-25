@@ -4,11 +4,19 @@
   "description": "Terminal agent loop powered by OpenRouter",
   "private": true,
   "type": "module",
+  "bin": {
+    "agent-loop": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=26"
   },
   "scripts": {
     "agent": "tsx src/cli.ts",
+    "build": "tsup",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -25,6 +33,7 @@
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.9",
+    "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.1",
