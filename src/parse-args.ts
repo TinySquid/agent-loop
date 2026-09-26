@@ -19,16 +19,14 @@ export class HelpRequest extends Error {
 
 export type CliCommand =
   | { type: "run-agent"; model: string; prompt: string }
-  | { type: "list-models"; refresh: boolean }
-  | { type: "list-free-models"; refresh: boolean }
-  | { type: "refresh-catalog" };
+  | { type: "list-models" }
+  | { type: "list-free-models" };
 
 interface ProgramOptions {
   prompt?: string;
   model?: string;
   listFreeModels?: boolean;
   listModels?: boolean;
-  refresh?: boolean;
 }
 
 function buildProgram(): CommanderCommand {
@@ -45,33 +43,27 @@ function buildProgram(): CommanderCommand {
   const prompt = new Option(
     "-p, --prompt <prompt>",
     "prompt to run the agent with"
-  ).conflicts(["listFreeModels", "listModels", "refresh"]);
+  ).conflicts(["listFreeModels", "listModels"]);
 
   const model = new Option(
     "-m, --model <slug>",
     "model slug to run the agent with"
-  ).conflicts(["listFreeModels", "listModels", "refresh"]);
+  ).conflicts(["listFreeModels", "listModels"]);
 
   const listFreeModels = new Option(
     "--list-free-models",
-    "print free model slugs from the cached catalog"
+    "print free model slugs from the OpenRouter API"
   ).conflicts(["prompt", "model", "listModels"]);
 
   const listModels = new Option(
     "--list-models",
-    "print non-free model slugs from the cached catalog"
+    "print non-free model slugs from the OpenRouter API"
   ).conflicts(["prompt", "model", "listFreeModels"]);
-
-  const refresh = new Option(
-    "--refresh",
-    "refresh the model catalog from the OpenRouter API"
-  ).conflicts(["prompt", "model"]);
 
   program.addOption(prompt);
   program.addOption(model);
   program.addOption(listFreeModels);
   program.addOption(listModels);
-  program.addOption(refresh);
 
   return program;
 }
@@ -115,13 +107,10 @@ export function parseArgv(argv: readonly string[]): CliCommand {
     return { type: "run-agent", model: opts.model, prompt: opts.prompt };
   }
   if (opts.listFreeModels) {
-    return { type: "list-free-models", refresh: opts.refresh ?? false };
+    return { type: "list-free-models" };
   }
   if (opts.listModels) {
-    return { type: "list-models", refresh: opts.refresh ?? false };
-  }
-  if (opts.refresh) {
-    return { type: "refresh-catalog" };
+    return { type: "list-models" };
   }
   throw new UsageError(
     "error: nothing to do — pass -p/--prompt with -m/--model, or a --list flag"

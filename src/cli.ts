@@ -1,33 +1,16 @@
 import { runAgent } from "./agent";
 import { resolveApiKey } from "./credentials";
 import {
-  createModelCatalog,
+  fetchModels,
   freeModelSlugs,
   paidModelSlugs,
-  type CatalogModel,
-  type ModelCatalog
-} from "./model-catalog";
+  type ModelInfo
+} from "./model-list";
 import { openRouterModel } from "./openrouter-model";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
 import { readFile } from "./tools";
 
-async function loadCatalog(
-  catalog: ModelCatalog,
-  refresh: boolean
-): Promise<CatalogModel[]> {
-  if (refresh) {
-    return catalog.refresh();
-  }
-  const models = await catalog.read();
-  if (!models) {
-    throw new Error(
-      `no cached model catalog found at '${catalog.filepath}' — run with --refresh to fetch one`
-    );
-  }
-  return models;
-}
-
-function printSlugs(models: readonly CatalogModel[], free: boolean): void {
+function printSlugs(models: readonly ModelInfo[], free: boolean): void {
   const slugs = free ? freeModelSlugs(models) : paidModelSlugs(models);
   for (const slug of slugs) {
     console.log(slug);
@@ -36,7 +19,6 @@ function printSlugs(models: readonly CatalogModel[], free: boolean): void {
 
 async function dispatch(): Promise<void> {
   const command = parseArgv(process.argv.slice(2));
-  const catalog = createModelCatalog();
 
   switch (command.type) {
     case "run-agent": {
@@ -50,14 +32,10 @@ async function dispatch(): Promise<void> {
       return;
     }
     case "list-free-models":
-      printSlugs(await loadCatalog(catalog, command.refresh), true);
+      printSlugs(await fetchModels(), true);
       return;
     case "list-models":
-      printSlugs(await loadCatalog(catalog, command.refresh), false);
-      return;
-    case "refresh-catalog":
-      await catalog.refresh();
-      console.log("Model catalog refreshed.");
+      printSlugs(await fetchModels(), false);
       return;
   }
 }

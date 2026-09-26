@@ -19,13 +19,9 @@ _Avoid_: model name, model id (when spoken casually), model key
 **Free model**:
 A model whose slug ends in `:free` and costs nothing per request.
 
-**Model catalog**:
-The cached list of all models OpenRouter offers, stored locally so list commands work offline.
-_Avoid_: model list, models file
-
-**Refresh**:
-Fetching the current model catalog from the OpenRouter API and replacing the cache with it. Refresh either fully succeeds or fails hard; it never falls back to stale data.
-_Avoid_: update, sync
+**Model list**:
+The set of models OpenRouter currently offers, fetched from the API each time a list command runs. There is no cache.
+_Avoid_: model catalog, cached catalog
 
 ### Credentials
 

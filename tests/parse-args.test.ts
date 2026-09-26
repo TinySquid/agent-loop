@@ -29,22 +29,14 @@ describe("parseArgv", () => {
     });
   });
 
-  it("parses --list-free-models --refresh", () => {
-    expect(parse("--list-free-models", "--refresh")).toEqual({
-      type: "list-free-models",
-      refresh: true
+  it("parses --list-free-models", () => {
+    expect(parse("--list-free-models")).toEqual({
+      type: "list-free-models"
     });
   });
 
-  it("parses --list-models --refresh", () => {
-    expect(parse("--list-models", "--refresh")).toEqual({
-      type: "list-models",
-      refresh: true
-    });
-  });
-
-  it("parses --refresh alone as refresh-catalog", () => {
-    expect(parse("--refresh")).toEqual({ type: "refresh-catalog" });
+  it("parses --list-models", () => {
+    expect(parse("--list-models")).toEqual({ type: "list-models" });
   });
 
   it("throws UsageError when --prompt has no --model", () => {
@@ -59,13 +51,7 @@ describe("parseArgv", () => {
     expect(() => parse("-m", "qwen/qwen3.8-27b:free")).toThrow(UsageError);
   });
 
-  it("throws UsageError for --refresh with --prompt", () => {
-    expect(() => parse("--refresh", "-p", "hello", "-m", "m")).toThrow(
-      UsageError
-    );
-  });
-
-  it("throws UsageError for --refresh with --list-models plus --prompt", () => {
+  it("throws UsageError for --list-models with --prompt", () => {
     expect(() =>
       parse("--list-models", "--prompt", "hello", "-m", "m")
     ).toThrow(UsageError);
