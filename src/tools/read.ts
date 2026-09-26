@@ -3,7 +3,7 @@ import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   DEFAULT_MAX_LINE_CHARS,
-  truncateHead
+  boundedOutput
 } from "./truncate";
 import type { Tool } from "./tool";
 
@@ -80,24 +80,22 @@ export function createReadTool(
       // The caller's limit and the tool's own line ceiling both cap the read;
       // a single bounded path decides truncation and the continuation notice.
       const limit = clampLimit(args.limit, options.maxLines);
-      const result = truncateHead(allLines.slice(start).join("\n"), {
-        ...options,
-        maxLines: limit
+      const result = boundedOutput(allLines.slice(start).join("\n"), {
+        maxLines: limit,
+        maxBytes: options.maxBytes,
+        maxLineChars: options.maxLineChars,
+        startLine: start + 1,
+        totalLines: allLines.length,
+        resumeHint: (next) => `Use offset=${next} to continue.`
       });
 
       const numberStart = start + 1; // display numbering is 1-indexed
       const numbered = result.lines.map(
         (line, i) => `${numberStart + i}: ${line}`
       );
-      const endLine = numberStart + result.lines.length - 1;
-
-      let text = numbered.join("\n");
-      if (result.truncated) {
-        text +=
-          `\n\n[Showing lines ${numberStart}-${endLine} of ${allLines.length} ` +
-          `(${result.truncatedBy} limit). Use offset=${endLine + 1} to continue.]`;
-      }
-      return text;
+      return result.notice === ""
+        ? numbered.join("\n")
+        : `${numbered.join("\n")}\n\n${result.notice}`;
     }
   };
 }

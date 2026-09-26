@@ -12,13 +12,22 @@ export { toolSpecs } from "./tool";
 export {
   BASH_TIMEOUT_CAP_MS,
   BASH_TIMEOUT_DEFAULT_MS,
+  DEFAULT_BASH_OPTIONS,
   DEFAULT_BASH_TIMEOUT_OPTIONS,
   createBashTool,
   deriveTimeout,
-  type BashTimeoutOptions
+  type BashTimeoutOptions,
+  type BashToolOptions
 } from "./bash";
 export { DEFAULT_READ_OPTIONS, createReadTool, type ReadOptions } from "./read";
-export * from "./truncate";
+export {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  DEFAULT_MAX_LINE_CHARS,
+  boundedOutput,
+  type BoundOptions,
+  type BoundResult
+} from "./truncate";
 
 /** The production toolset, assembled with default options. */
 export const defaultTools: readonly Tool[] = [

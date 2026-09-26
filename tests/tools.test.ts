@@ -115,7 +115,9 @@ describe("createBashTool", () => {
     const result = await createBashTool(FAST_OPTIONS).execute({
       command: "echo hello"
     });
-    expect(result).toBe("hello\n");
+    // bounded output owns the trailing-newline rule: a final newline is a
+    // line terminator, not content
+    expect(result).toBe("hello");
   });
 
   it("includes stderr and exit code on failure", async () => {
@@ -167,6 +169,48 @@ describe("createBashTool", () => {
     expect(elapsed).toBeLessThan(5_000);
     expect(result).toContain("Exit Code 124");
     expect(result).not.toContain("late");
+  });
+
+  it("truncates runaway stdout with a continuation notice", async () => {
+    const tool = createBashTool({
+      ...FAST_OPTIONS,
+      maxLines: 3,
+      maxBytes: 50_000,
+      maxLineChars: 2000
+    });
+    const result = await tool.execute({ command: "seq 100" });
+    expect(result.split("\n\n")[0]?.split("\n")).toHaveLength(3);
+    expect(result).toContain("(lines limit)");
+    // a finished command's output is not pageable: no offset tail
+    expect(result).not.toContain("Use offset");
+  });
+
+  it("truncates error output too, keeping the error frame head", async () => {
+    const tool = createBashTool({
+      ...FAST_OPTIONS,
+      maxLines: 3,
+      maxBytes: 50_000,
+      maxLineChars: 2000
+    });
+    const result = await tool.execute({
+      command: "seq 100 >&2; exit 7"
+    });
+    expect(result).toContain("ERROR (Exit Code 7)");
+    expect(result).toContain("(lines limit)");
+    // 3 kept lines, blank separator, notice
+    expect(result.split("\n")).toHaveLength(5);
+    expect(result).not.toContain("\n99");
+  });
+
+  it("inline-truncates a single oversized output line", async () => {
+    const tool = createBashTool({
+      ...FAST_OPTIONS,
+      maxLines: 100,
+      maxBytes: 50_000,
+      maxLineChars: 10
+    });
+    const result = await tool.execute({ command: "echo aaaaaaaaaaaaaaaaaaaa" });
+    expect(result).toContain("line truncated to 10 chars");
   });
 });
 

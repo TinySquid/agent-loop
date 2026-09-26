@@ -18,6 +18,10 @@ _Avoid_: config, environment setting
 The head-truncation every bounding tool applies to its own output: first N lines subject to a byte cap, whichever limit is hit first, never partial lines. Oversized lines are cut inline to the per-line char cap. The tool, not the model, is responsible for keeping tool output bounded.
 _Avoid_: clipping, cutting, pruned output
 
+**Bounded output**:
+The seam every bounding tool funnels raw text through: it returns the kept lines plus the continuation notice already built (or empty when nothing was cut). Tools hand in text and caps; the notice format and its character budget live in one place, so a new bounding tool needs zero new truncation code.
+_Avoid_: truncation helper, truncate call
+
 **Continuation notice**:
 The message appended to truncated tool output telling the model exactly what it saw and how to get more (e.g. `[Showing lines 1–2000 of 3500 (lines limit). Use offset=2001 to continue.]`). Makes paging self-healing: the model never guesses the next offset.
 _Avoid_: ellipsis, "..." marker

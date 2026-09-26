@@ -1,42 +1,61 @@
 /**
- * Pure head-truncation for tool outputs. Whichever limit is hit first wins;
- * never returns partial lines. The read (and future grep/list) tools call
- * this with their active options, so every tool bounds its own output
- * instead of trusting model discretion.
+ * Bounded output for tools: the deepened truncation seam. A caller hands in
+ * raw text and its caps; the module returns the kept lines plus the
+ * continuation notice already built (or empty when nothing was cut), so no
+ * tool ever hand-strings a notice again. Adding a new bounding tool needs
+ * zero new truncation code.
  */
 export const DEFAULT_MAX_LINES = 2000;
 export const DEFAULT_MAX_BYTES = 50 * 1024;
 export const DEFAULT_MAX_LINE_CHARS = 2000;
 
-export interface TruncateOptions {
+/** Notices are module-owned; a runaway resume hint is dropped past this. */
+const MAX_NOTICE_CHARS = 200;
+
+export interface BoundOptions {
   /** Hard line ceiling for the kept window. */
   maxLines: number;
   /** Hard byte ceiling for the kept window. */
   maxBytes: number;
   /** Characters kept per line before inline truncation (long-line guard). */
   maxLineChars: number;
+  /** 1-indexed display line of the window's first line (paging tools). */
+  startLine?: number;
+  /** Line total of the full content the window came from (paging tools). */
+  totalLines?: number;
+  /**
+   * How the model gets what was cut, given the first line not shown. Omit
+   * for output the model cannot page (e.g. a finished command's stdout).
+   */
+  resumeHint?: (nextLine: number) => string;
 }
 
 export type TruncationCause = "lines" | "bytes" | null;
 
-export interface TruncationResult {
+export interface BoundResult {
   /** Kept lines, already per-line truncated. */
   lines: string[];
+  /** Kept lines joined; the continuation notice appended when truncated. */
+  text: string;
   /** Total lines in the input window, before truncation. */
   totalLines: number;
   truncated: boolean;
   truncatedBy: TruncationCause;
+  /** The built continuation notice; empty string when nothing was cut. */
+  notice: string;
 }
 
 /**
- * Truncate content from the head: keep the first N lines subject to a byte
- * cap, cutting each oversized line to `maxLineChars` first. A trailing
- * newline does not count as an extra line.
+ * Bound raw text to the active caps: keep the first N lines subject to a
+ * byte cap, cutting each oversized line to `maxLineChars` first. A trailing
+ * newline does not count as an extra line. When content is cut, the result
+ * carries the continuation notice telling the model exactly what it saw and
+ * how to get more — the caller only places it.
  */
-export function truncateHead(
+export function boundedOutput(
   content: string,
-  options: TruncateOptions
-): TruncationResult {
+  options: BoundOptions
+): BoundResult {
   const normalized =
     content.endsWith("\n") && content.length > 0
       ? content.slice(0, -1)
@@ -64,7 +83,7 @@ export function truncateHead(
       truncatedBy = "bytes";
       if (kept.length > 0) break;
       // The first line alone exceeds the byte cap: keep it anyway (its size
-      // is bounded by maxLineChars) so a bounded read is never empty.
+      // is bounded by maxLineChars) so bounded output is never empty.
       kept.push(line);
       break;
     }
@@ -72,10 +91,39 @@ export function truncateHead(
     bytes += size;
   }
 
+  const notice =
+    truncatedBy === null
+      ? ""
+      : buildNotice(kept.length, totalLines, truncatedBy, options);
+
+  const body = kept.join("\n");
   return {
     lines: kept,
+    text: notice === "" ? body : `${body}\n\n${notice}`,
     totalLines,
     truncated: truncatedBy !== null,
-    truncatedBy
+    truncatedBy,
+    notice
   };
+}
+
+/**
+ * The continuation notice: what the model saw and how to get more. The
+ * module owns the format and the budget, so notices stay short and
+ * consistent no matter which tool produced them.
+ */
+function buildNotice(
+  keptCount: number,
+  totalLines: number,
+  truncatedBy: TruncationCause,
+  options: BoundOptions
+): string {
+  const start = options.startLine ?? 1;
+  const end = start + keptCount - 1;
+  const total = options.totalLines ?? totalLines;
+  const base = `[Showing lines ${start}-${end} of ${total} (${truncatedBy} limit).]`;
+  if (!options.resumeHint) return base;
+  const tail = options.resumeHint(end + 1);
+  if (base.length + 1 + tail.length > MAX_NOTICE_CHARS) return base;
+  return `${base.slice(0, -1)} ${tail}]`;
 }

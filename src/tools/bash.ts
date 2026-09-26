@@ -1,4 +1,10 @@
 import { spawn } from "node:child_process";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  DEFAULT_MAX_LINE_CHARS,
+  boundedOutput
+} from "./truncate";
 import type { Tool } from "./tool";
 
 /** Ceilings for the Bash tool's per-call `timeout_ms` parameter. */
@@ -8,10 +14,7 @@ export const BASH_TIMEOUT_CAP_MS = 120_000;
 /** Time between SIGTERM and SIGKILL when a timed-out command won't die. */
 const SIGKILL_GRACE_MS = 1_000;
 
-/**
- * Tunable knobs for the Bash tool. Options exist so tests can scale the
- * timings down to milliseconds; production always uses the defaults.
- */
+/** The Bash tool's timeout knobs, kept separate for deriveTimeout callers. */
 export interface BashTimeoutOptions {
   /** Default when the model passes no/invalid `timeout_ms`. */
   defaultMs: number;
@@ -21,10 +24,31 @@ export interface BashTimeoutOptions {
   sigkillGraceMs: number;
 }
 
+/**
+ * Tunable knobs for the Bash tool. Options exist so tests can scale the
+ * timings and output caps down to milliseconds and bytes; production
+ * always uses the defaults.
+ */
+export interface BashToolOptions extends BashTimeoutOptions {
+  /** Hard line ceiling for returned output. */
+  maxLines: number;
+  /** Hard byte ceiling for returned output. */
+  maxBytes: number;
+  /** Characters kept per line before inline truncation. */
+  maxLineChars: number;
+}
+
 export const DEFAULT_BASH_TIMEOUT_OPTIONS: BashTimeoutOptions = {
   defaultMs: BASH_TIMEOUT_DEFAULT_MS,
   capMs: BASH_TIMEOUT_CAP_MS,
   sigkillGraceMs: SIGKILL_GRACE_MS
+};
+
+export const DEFAULT_BASH_OPTIONS: BashToolOptions = {
+  ...DEFAULT_BASH_TIMEOUT_OPTIONS,
+  maxLines: DEFAULT_MAX_LINES,
+  maxBytes: DEFAULT_MAX_BYTES,
+  maxLineChars: DEFAULT_MAX_LINE_CHARS
 };
 
 /** Clamp/normalize the model-provided timeout against the active options. */
@@ -41,16 +65,29 @@ export function deriveTimeout(
 /**
  * The Bash tool factory. The schema description is built from the active
  * options so the model always sees the ceiling it is actually held to.
+ * Output is funneled through the bounded-output seam, so a runaway command
+ * is truncated with a continuation notice like every other tool.
  */
-export function createBashTool(
-  options: BashTimeoutOptions = DEFAULT_BASH_TIMEOUT_OPTIONS
-): Tool {
+export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
+  const o = { ...DEFAULT_BASH_OPTIONS, ...options };
+  const bound = (raw: string): string =>
+    boundedOutput(raw, {
+      maxLines: o.maxLines,
+      maxBytes: o.maxBytes,
+      maxLineChars: o.maxLineChars
+      // no resumeHint: a finished command's output is not pageable
+    }).text;
   return {
     spec: {
       type: "function",
       function: {
         name: "Bash",
-        description: `Execute a shell command in the current working directory (${process.cwd()})`,
+        description:
+          "Execute a shell command in the current working directory " +
+          `(${process.cwd()}). Output is truncated to ${o.maxLines} lines or ` +
+          `${Math.round(o.maxBytes / 1024)}KB (whichever is hit first); ` +
+          "long lines are cut to " +
+          `${o.maxLineChars} chars.`,
         parameters: {
           type: "object",
           required: ["command"],
@@ -68,7 +105,7 @@ export function createBashTool(
       }
     },
     async execute(args) {
-      const timeoutMs = deriveTimeout(args.timeout_ms, options);
+      const timeoutMs = deriveTimeout(args.timeout_ms, o);
 
       // Own process group so a timeout can kill the whole tree:
       // `bash -c "sleep 300"` forks `sleep`; killing bash alone leaves the
@@ -120,20 +157,24 @@ export function createBashTool(
         }, timeoutMs);
 
         child.on("error", (err) => {
-          finish(`ERROR (spawn failed): ${err.message}`);
+          finish(bound(`ERROR (spawn failed): ${err.message}`));
         });
 
         child.on("close", (code, signal) => {
           if (signal) {
             finish(
-              `ERROR (Exit Code 124, command timed out after ${timeoutMs}ms and was killed by ${signal}):\n${stdout}\n${stderr}`.trim()
+              bound(
+                `ERROR (Exit Code 124, command timed out after ${timeoutMs}ms and was killed by ${signal}):\n${stdout}\n${stderr}`.trim()
+              )
             );
           } else {
             const exitCode = code ?? 1;
             finish(
-              exitCode === 0
-                ? stdout
-                : `ERROR (Exit Code ${exitCode}):\n${stdout}\n${stderr}`.trim()
+              bound(
+                exitCode === 0
+                  ? stdout
+                  : `ERROR (Exit Code ${exitCode}):\n${stdout}\n${stderr}`.trim()
+              )
             );
           }
         });
