@@ -27,9 +27,9 @@ async function toolContent(
   tools: readonly Tool[],
   call: ChatToolCall
 ): Promise<string> {
-  const tool = tools.find((t) => t.function.name === call.function.name);
+  const tool = tools.find((t) => t.spec.function.name === call.function.name);
   if (!tool) {
-    const known = tools.map((t) => t.function.name).join(", ");
+    const known = tools.map((t) => t.spec.function.name).join(", ");
     return toolError(
       `unknown tool '${call.function.name}'. known tools: ${known}`
     );

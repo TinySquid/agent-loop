@@ -35,32 +35,34 @@ export function createReadTool(
   options: ReadOptions = DEFAULT_READ_OPTIONS
 ): Tool {
   return {
-    type: "function",
-    function: {
-      name: "read",
-      description:
-        "Read the contents of a file. For text files, output is " +
-        `truncated to ${options.maxLines} lines or ` +
-        `${Math.round(options.maxBytes / 1024)}KB (whichever is hit first); ` +
-        "long lines are cut to " +
-        `${options.maxLineChars} chars. Use offset/limit for large files; ` +
-        "when you need the full file, continue with offset until complete.",
-      parameters: {
-        type: "object",
-        required: ["file_path"],
-        properties: {
-          file_path: {
-            type: "string",
-            description: "The path to the file to read"
-          },
-          offset: {
-            type: "integer",
-            description:
-              "Line number to start reading from (1-indexed, default 1)"
-          },
-          limit: {
-            type: "integer",
-            description: `Maximum number of lines to read (default/max ${options.maxLines})`
+    spec: {
+      type: "function",
+      function: {
+        name: "read",
+        description:
+          "Read the contents of a file. For text files, output is " +
+          `truncated to ${options.maxLines} lines or ` +
+          `${Math.round(options.maxBytes / 1024)}KB (whichever is hit first); ` +
+          "long lines are cut to " +
+          `${options.maxLineChars} chars. Use offset/limit for large files; ` +
+          "when you need the full file, continue with offset until complete.",
+        parameters: {
+          type: "object",
+          required: ["file_path"],
+          properties: {
+            file_path: {
+              type: "string",
+              description: "The path to the file to read"
+            },
+            offset: {
+              type: "integer",
+              description:
+                "Line number to start reading from (1-indexed, default 1)"
+            },
+            limit: {
+              type: "integer",
+              description: `Maximum number of lines to read (default/max ${options.maxLines})`
+            }
           }
         }
       }

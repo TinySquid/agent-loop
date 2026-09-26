@@ -11,7 +11,8 @@ export type ChatChunkHandler = (delta: ChatStreamDelta) => void;
 export interface ChatModel {
   complete(
     turns: readonly ChatMessages[],
-    toolSpecs: readonly ChatFunctionTool[],
+    /** Wire specs for the tools the model may call. */
+    wireTools: readonly ChatFunctionTool[],
     /** Omit for the simplest one-shot call; when given, the model streams. */
     onChunk?: ChatChunkHandler
   ): Promise<ChatResult>;

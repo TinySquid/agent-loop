@@ -46,21 +46,23 @@ export function createBashTool(
   options: BashTimeoutOptions = DEFAULT_BASH_TIMEOUT_OPTIONS
 ): Tool {
   return {
-    type: "function",
-    function: {
-      name: "Bash",
-      description: `Execute a shell command in the current working directory (${process.cwd()})`,
-      parameters: {
-        type: "object",
-        required: ["command"],
-        properties: {
-          command: {
-            type: "string",
-            description: "The command to execute"
-          },
-          timeout_ms: {
-            type: "integer",
-            description: `Optional maximum runtime in milliseconds (default ${options.defaultMs}, capped at ${options.capMs}). On timeout the process is killed and partial output is returned with exit code 124.`
+    spec: {
+      type: "function",
+      function: {
+        name: "Bash",
+        description: `Execute a shell command in the current working directory (${process.cwd()})`,
+        parameters: {
+          type: "object",
+          required: ["command"],
+          properties: {
+            command: {
+              type: "string",
+              description: "The command to execute"
+            },
+            timeout_ms: {
+              type: "integer",
+              description: `Optional maximum runtime in milliseconds (default ${options.defaultMs}, capped at ${options.capMs}). On timeout the process is killed and partial output is returned with exit code 124.`
+            }
           }
         }
       }

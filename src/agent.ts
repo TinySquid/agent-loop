@@ -7,7 +7,7 @@ import type {
 } from "@openrouter/sdk/models";
 import type { ChatChunkHandler, ChatModel } from "./chat-model";
 import { executeToolCalls } from "./tool-execution";
-import type { Tool } from "./tools";
+import { toolSpecs, type Tool } from "./tools";
 
 export interface AgentRun {
   prompt: string;
@@ -31,18 +31,9 @@ export type AgentEvent =
  * until a final answer. CLI dispatch calls this with a ChatModel adapter.
  */
 export async function runAgent(run: AgentRun): Promise<string> {
-  const tools: ChatFunctionTool[] = run.tools.map((tool) => {
-    // strip `execute` so the implementation half never reaches the wire
-    const spec: ChatFunctionTool = {
-      type: tool.type,
-      function: {
-        name: tool.function.name,
-        description: tool.function.description,
-        parameters: tool.function.parameters
-      }
-    };
-    return spec;
-  });
+  // The tools module owns the model half -> wire projection; the loop never
+  // touches tool internals, so new schema fields ride through untouched.
+  const tools: readonly ChatFunctionTool[] = toolSpecs(run.tools);
   const turns: ChatMessages[] = setInitialTurn(run.prompt, run.system);
   const totals = { promptTokens: 0, completionTokens: 0 };
 

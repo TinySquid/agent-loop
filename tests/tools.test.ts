@@ -5,7 +5,9 @@ import {
   DEFAULT_BASH_TIMEOUT_OPTIONS,
   createBashTool,
   createReadTool,
-  deriveTimeout
+  deriveTimeout,
+  toolSpecs,
+  type Tool
 } from "../src/tools/index.js";
 
 /** Production-style options, scaled down so timing tests stay fast. */
@@ -14,6 +16,44 @@ const FAST_OPTIONS = {
   capMs: 200,
   sigkillGraceMs: 50
 };
+
+describe("toolSpecs", () => {
+  const specOnly: Tool = {
+    spec: {
+      type: "function",
+      function: {
+        name: "Echo",
+        description: "echo fixture",
+        parameters: { type: "object", properties: {} },
+        strict: true
+      }
+    },
+    async execute() {
+      return "implemented";
+    }
+  };
+
+  it("projects the model half onto the wire, unchanged", () => {
+    expect(toolSpecs([specOnly])).toEqual([specOnly.spec]);
+  });
+
+  it("never puts the implementation half on the wire", () => {
+    const [onWire] = toolSpecs([specOnly]);
+    expect(onWire).not.toHaveProperty("execute");
+    expect(JSON.stringify(onWire)).not.toContain("implemented");
+  });
+
+  it("keeps schema-only fields the caller set (strict, cache control)", () => {
+    const [onWire] = toolSpecs([specOnly]) as readonly unknown[] as [
+      { function: { strict?: boolean } }
+    ];
+    expect(onWire.function.strict).toBe(true);
+  });
+
+  it("returns an empty projection for an empty toolset", () => {
+    expect(toolSpecs([])).toEqual([]);
+  });
+});
 
 describe("deriveTimeout (production options)", () => {
   it("defaults when timeout_ms is missing or invalid", () => {
@@ -61,7 +101,7 @@ describe("deriveTimeout (fast options)", () => {
 describe("createBashTool", () => {
   it("reflects the active options in the timeout_ms schema description", () => {
     const tool = createBashTool(FAST_OPTIONS);
-    const parameters = tool.function.parameters as
+    const parameters = tool.spec.function.parameters as
       | {
           properties?: { timeout_ms?: { description?: string } };
         }
@@ -214,7 +254,7 @@ describe("createReadTool", () => {
       maxBytes: 1024,
       maxLineChars: 80
     });
-    expect(tool.function.description).toContain("truncated to 7 lines");
-    expect(tool.function.description).toContain("1KB");
+    expect(tool.spec.function.description).toContain("truncated to 7 lines");
+    expect(tool.spec.function.description).toContain("1KB");
   });
 });

@@ -29,7 +29,7 @@ export function openRouterModel(
   return {
     async complete(
       turns: readonly ChatMessages[],
-      tools: readonly ChatFunctionTool[],
+      wireTools: readonly ChatFunctionTool[],
       onChunk?: ChatChunkHandler
     ): Promise<ChatResult> {
       const reply = await unwrapAsync(
@@ -37,7 +37,7 @@ export function openRouterModel(
           chatRequest: {
             model: slug,
             messages: [...turns],
-            tools: [...tools],
+            tools: [...wireTools],
             stream: true
           }
         })

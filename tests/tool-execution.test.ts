@@ -5,11 +5,13 @@ import type { Tool } from "../src/tools/index.js";
 
 function echoTool(output: string): Tool {
   return {
-    type: "function",
-    function: {
-      name: "Echo",
-      description: "echo fixture",
-      parameters: { type: "object", properties: {} }
+    spec: {
+      type: "function",
+      function: {
+        name: "Echo",
+        description: "echo fixture",
+        parameters: { type: "object", properties: {} }
+      }
     },
     async execute() {
       return output;

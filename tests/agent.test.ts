@@ -46,17 +46,19 @@ function toolCall(name: string, argsJson: string): ChatToolCall {
 }
 
 const plusTool: Tool = {
-  type: "function",
-  function: {
-    name: "plus",
-    description: "Add two numbers",
-    parameters: {
-      type: "object",
-      properties: {
-        a: { type: "number" },
-        b: { type: "number" }
-      },
-      required: ["a", "b"]
+  spec: {
+    type: "function",
+    function: {
+      name: "plus",
+      description: "Add two numbers",
+      parameters: {
+        type: "object",
+        properties: {
+          a: { type: "number" },
+          b: { type: "number" }
+        },
+        required: ["a", "b"]
+      }
     }
   },
   async execute(args) {

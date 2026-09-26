@@ -7,7 +7,8 @@ import { createBashTool } from "./bash";
 import { createReadTool } from "./read";
 import type { Tool } from "./tool";
 
-export type { Tool } from "./tool";
+export type { Tool, ToolSpec } from "./tool";
+export { toolSpecs } from "./tool";
 export {
   BASH_TIMEOUT_CAP_MS,
   BASH_TIMEOUT_DEFAULT_MS,
