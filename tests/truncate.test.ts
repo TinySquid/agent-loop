@@ -1,17 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  TRUNCATION_CAPS,
   boundedOutput,
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  DEFAULT_MAX_LINE_CHARS,
   type BoundOptions
 } from "../src/tools/truncate.js";
 
-const OPTS: BoundOptions = {
-  maxLines: DEFAULT_MAX_LINES,
-  maxBytes: DEFAULT_MAX_BYTES,
-  maxLineChars: DEFAULT_MAX_LINE_CHARS
-};
+/** The shared caps bundle, under its widest-override test alias. */
+const OPTS: BoundOptions = { ...TRUNCATION_CAPS };
 
 /** The paging tail read-style tools pass; offset is the shared paging vocabulary. */
 const offsetTail = (next: number) => `Use offset=${next} to continue.`;

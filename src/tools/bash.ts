@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
 import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  DEFAULT_MAX_LINE_CHARS,
-  boundedOutput
+  TRUNCATION_CAPS,
+  boundedOutput,
+  type TruncationCaps
 } from "./truncate";
 import type { Tool } from "./tool";
 
@@ -25,18 +24,11 @@ export interface BashTimeoutOptions {
 }
 
 /**
- * Tunable knobs for the Bash tool. Options exist so tests can scale the
- * timings and output caps down to milliseconds and bytes; production
- * always uses the defaults.
+ * Tunable knobs for the Bash tool: the shared truncation caps plus the
+ * timeout knobs. Options exist so tests can scale the timings and output
+ * sizes down to milliseconds and bytes; production always uses the defaults.
  */
-export interface BashToolOptions extends BashTimeoutOptions {
-  /** Hard line ceiling for returned output. */
-  maxLines: number;
-  /** Hard byte ceiling for returned output. */
-  maxBytes: number;
-  /** Characters kept per line before inline truncation. */
-  maxLineChars: number;
-}
+export interface BashToolOptions extends TruncationCaps, BashTimeoutOptions {}
 
 export const DEFAULT_BASH_TIMEOUT_OPTIONS: BashTimeoutOptions = {
   defaultMs: BASH_TIMEOUT_DEFAULT_MS,
@@ -46,9 +38,7 @@ export const DEFAULT_BASH_TIMEOUT_OPTIONS: BashTimeoutOptions = {
 
 export const DEFAULT_BASH_OPTIONS: BashToolOptions = {
   ...DEFAULT_BASH_TIMEOUT_OPTIONS,
-  maxLines: DEFAULT_MAX_LINES,
-  maxBytes: DEFAULT_MAX_BYTES,
-  maxLineChars: DEFAULT_MAX_LINE_CHARS
+  ...TRUNCATION_CAPS
 };
 
 /** Clamp/normalize the model-provided timeout against the active options. */

@@ -1,30 +1,15 @@
 import * as fs from "node:fs";
 import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  DEFAULT_MAX_LINE_CHARS,
-  boundedOutput
+  TRUNCATION_CAPS,
+  boundedOutput,
+  type TruncationCaps
 } from "./truncate";
 import type { Tool } from "./tool";
 
-/**
- * Tunable knobs for the read tool. Like BashTimeoutOptions, these exist for
- * tests; production uses the pi/opencode-converged defaults below.
- */
-export interface ReadOptions {
-  /** Default/maximum lines returned per call. */
-  maxLines: number;
-  /** Default/maximum bytes returned per call. */
-  maxBytes: number;
-  /** Characters kept per line before inline truncation. */
-  maxLineChars: number;
-}
+/** The read tool's construction-time knobs: shared caps, injected for tests. */
+export type ReadOptions = TruncationCaps;
 
-export const DEFAULT_READ_OPTIONS: ReadOptions = {
-  maxLines: DEFAULT_MAX_LINES,
-  maxBytes: DEFAULT_MAX_BYTES,
-  maxLineChars: DEFAULT_MAX_LINE_CHARS
-};
+export const DEFAULT_READ_OPTIONS: ReadOptions = TRUNCATION_CAPS;
 
 /**
  * The read tool factory. Output is bounded at maxLines/maxBytes (whichever

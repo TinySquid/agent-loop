@@ -9,6 +9,27 @@ export const DEFAULT_MAX_LINES = 2000;
 export const DEFAULT_MAX_BYTES = 50 * 1024;
 export const DEFAULT_MAX_LINE_CHARS = 2000;
 
+/**
+ * The truncation caps: the triple every bounding tool carries (lines, bytes,
+ * per-line chars). A type born from a data clump, not from speculation: three
+ * fields, always together, never a fourth.
+ */
+export interface TruncationCaps {
+  /** Hard line ceiling for returned output. */
+  maxLines: number;
+  /** Hard byte ceiling for returned output. */
+  maxBytes: number;
+  /** Characters kept per line before inline truncation (long-line guard). */
+  maxLineChars: number;
+}
+
+/** The production values of the caps; tool option sets spread this. */
+export const TRUNCATION_CAPS: TruncationCaps = {
+  maxLines: DEFAULT_MAX_LINES,
+  maxBytes: DEFAULT_MAX_BYTES,
+  maxLineChars: DEFAULT_MAX_LINE_CHARS
+};
+
 /** Notices are module-owned; a runaway resume hint is dropped past this. */
 const MAX_NOTICE_CHARS = 200;
 

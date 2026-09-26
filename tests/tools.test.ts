@@ -7,6 +7,7 @@ import {
   createReadTool,
   deriveTimeout,
   toolSpecs,
+  TRUNCATION_CAPS,
   type Tool
 } from "../src/tools/index.js";
 
@@ -16,6 +17,9 @@ const FAST_OPTIONS = {
   capMs: 200,
   sigkillGraceMs: 50
 };
+
+/** Caps whose only active axis is the one a test overrides. */
+const UNBOUNDED_CAPS = TRUNCATION_CAPS;
 
 describe("toolSpecs", () => {
   const specOnly: Tool = {
@@ -182,9 +186,8 @@ describe("createBashTool", () => {
   it("truncates runaway stdout with a continuation notice", async () => {
     const tool = createBashTool({
       ...FAST_OPTIONS,
-      maxLines: 3,
-      maxBytes: 50_000,
-      maxLineChars: 2000
+      ...UNBOUNDED_CAPS,
+      maxLines: 3
     });
     const result = await tool.execute({ command: "seq 100" });
     expect(result.split("\n\n")[0]?.split("\n")).toHaveLength(3);
@@ -196,9 +199,8 @@ describe("createBashTool", () => {
   it("truncates error output too, keeping the error frame head", async () => {
     const tool = createBashTool({
       ...FAST_OPTIONS,
-      maxLines: 3,
-      maxBytes: 50_000,
-      maxLineChars: 2000
+      ...UNBOUNDED_CAPS,
+      maxLines: 3
     });
     const result = await tool.execute({
       command: "seq 100 >&2; exit 7"
@@ -249,9 +251,8 @@ describe("createReadTool", () => {
 
   it("appends a continuation notice when the line limit truncates", async () => {
     const tool = createReadTool({
-      maxLines: 2,
-      maxBytes: 50_000,
-      maxLineChars: 2000
+      ...UNBOUNDED_CAPS,
+      maxLines: 2
     });
     const result = await tool.execute({ file_path: FIXTURE });
     expect(result).toContain("Showing lines 1-2 of 3");

@@ -24,9 +24,11 @@ export {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   DEFAULT_MAX_LINE_CHARS,
+  TRUNCATION_CAPS,
   boundedOutput,
   type BoundOptions,
-  type BoundResult
+  type BoundResult,
+  type TruncationCaps
 } from "./truncate";
 
 /** The production toolset, assembled with default options. */
