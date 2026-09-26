@@ -88,6 +88,12 @@ async function dispatch(): Promise<void> {
     case "run-agent": {
       const credentials = resolveApiKey();
       const answer = await runAgent({
+        // TODO: extract system prompt.
+        // TODO: decide if the agent should try and find a SYSTEM.md / AGENTS.md to use instead for this.
+        system:
+          `The current date is ${new Date()}\n` +
+          `You are running in the working directory: ${process.cwd()}. ` +
+          "Treat relative file paths as relative to this directory.",
         prompt: command.prompt,
         model: openRouterModel(credentials, command.model),
         tools: [readFile, executeBashCommand],

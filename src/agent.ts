@@ -13,6 +13,7 @@ export interface AgentRun {
   prompt: string;
   model: ChatModel;
   tools: readonly Tool[];
+  system?: string;
   maxRounds?: number;
   /** Omit for a silent run; when given, the loop reports its live activity. */
   onEvent?: (event: AgentEvent) => void;
@@ -42,7 +43,7 @@ export async function runAgent(run: AgentRun): Promise<string> {
     };
     return spec;
   });
-  const turns: ChatMessages[] = [{ role: "user", content: run.prompt }];
+  const turns: ChatMessages[] = setInitialTurn(run.prompt, run.system);
   const totals = { promptTokens: 0, completionTokens: 0 };
 
   for (let round = 1; round <= (run.maxRounds ?? 8); round++) {
@@ -88,4 +89,19 @@ function streamToEvents(run: AgentRun): ChatChunkHandler | undefined {
     if (delta.content)
       run.onEvent?.({ type: "assistant-text", text: delta.content });
   };
+}
+
+/**
+ * Creates the initial turn with the user prompt, optionally injecting
+ * a system prompt as the first entry if provided.
+ */
+function setInitialTurn(user: string, system?: string): ChatMessages[] {
+  const turn: ChatMessages[] = [{ role: "user", content: user }];
+  if (system !== undefined)
+    turn.unshift({
+      role: "system",
+      content: system
+    });
+
+  return turn;
 }
