@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import {
   TRUNCATION_CAPS,
   boundedOutput,
+  coercePositiveInt,
   type TruncationCaps
 } from "./truncate";
 import type { Tool } from "./tool";
@@ -87,6 +88,8 @@ export function createReadTool(
 
 /** Clamp the model's 1-indexed offset into a valid 0-indexed line index. */
 function clampOffset(value: unknown, allLines: readonly string[]): number {
+  // Offset's floor is 1 (head of file), so <= 1 clamps to the head rather
+  // than falling back to a default the way limit and timeout do.
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 1) {
     return 0;
   }
@@ -101,8 +104,7 @@ function clampOffset(value: unknown, allLines: readonly string[]): number {
 
 /** Clamp the model's limit to a sane positive integer. */
 function clampLimit(value: unknown, maxLines: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return maxLines;
-  }
-  return Math.min(Math.floor(value), maxLines);
+  const requested = coercePositiveInt(value);
+  if (requested === null) return maxLines;
+  return Math.min(requested, maxLines);
 }

@@ -78,6 +78,16 @@ describe("deriveTimeout (production options)", () => {
     );
   });
 
+  it("treats BigInt as a malformed shape, sharing the read tool's invalid-value seam", () => {
+    // the shape shared with clampOffset/clampLimit: typeof gate is typeof value
+    expect(
+      deriveTimeout(BigInt(10), {
+        ...DEFAULT_BASH_TIMEOUT_OPTIONS,
+        capMs: 2_000_000_000
+      })
+    ).toBe(BASH_TIMEOUT_DEFAULT_MS);
+  });
+
   it("clamps values above the 120s cap to exactly the cap", () => {
     expect(
       deriveTimeout(BASH_TIMEOUT_CAP_MS * 100, DEFAULT_BASH_TIMEOUT_OPTIONS)

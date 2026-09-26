@@ -26,6 +26,7 @@ export {
   DEFAULT_MAX_LINE_CHARS,
   TRUNCATION_CAPS,
   boundedOutput,
+  coercePositiveInt,
   type BoundOptions,
   type BoundResult,
   type TruncationCaps

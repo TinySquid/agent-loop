@@ -30,6 +30,19 @@ export const TRUNCATION_CAPS: TruncationCaps = {
   maxLineChars: DEFAULT_MAX_LINE_CHARS
 };
 
+/**
+ * The one malformed-shape rule every numeric tool argument shares: a
+ * well-formed positive number is floored and kept, anything else is null and
+ * the caller supplies its axis-specific fallback (a default, a cap, an
+ * error). One implementation instead of three near-clones.
+ */
+export function coercePositiveInt(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.floor(value);
+}
+
 /** Notices are module-owned; a runaway resume hint is dropped past this. */
 const MAX_NOTICE_CHARS = 200;
 

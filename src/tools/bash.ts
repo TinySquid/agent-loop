@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import {
   TRUNCATION_CAPS,
   boundedOutput,
+  coercePositiveInt,
   type TruncationCaps
 } from "./truncate";
 import type { Tool } from "./tool";
@@ -46,10 +47,9 @@ export function deriveTimeout(
   value: unknown,
   options: BashTimeoutOptions
 ): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return options.defaultMs;
-  }
-  return Math.min(Math.floor(value), options.capMs);
+  const requestedMs = coercePositiveInt(value);
+  if (requestedMs === null) return options.defaultMs;
+  return Math.min(requestedMs, options.capMs);
 }
 
 /**
