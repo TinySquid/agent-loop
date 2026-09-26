@@ -1,4 +1,5 @@
 import { runAgent } from "./agent";
+import { resolveApiKey } from "./credentials";
 import {
   createModelCatalog,
   freeModelSlugs,
@@ -6,7 +7,9 @@ import {
   type CatalogModel,
   type ModelCatalog
 } from "./model-catalog";
+import { openRouterModel } from "./openrouter-model";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
+import { readFile } from "./tools";
 
 async function loadCatalog(
   catalog: ModelCatalog,
@@ -36,9 +39,16 @@ async function dispatch(): Promise<void> {
   const catalog = createModelCatalog();
 
   switch (command.type) {
-    case "run-agent":
-      await runAgent({ model: command.model, prompt: command.prompt });
+    case "run-agent": {
+      const credentials = resolveApiKey();
+      const answer = await runAgent({
+        prompt: command.prompt,
+        model: openRouterModel(credentials, command.model),
+        tools: [readFile]
+      });
+      console.log(answer);
       return;
+    }
     case "list-free-models":
       printSlugs(await loadCatalog(catalog, command.refresh), true);
       return;
