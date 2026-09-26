@@ -15,7 +15,8 @@ describe("parseArgv", () => {
     expect(parse("-p", "hello", "-m", "google/gemma-4-31b-it:free")).toEqual({
       type: "run-agent",
       model: "google/gemma-4-31b-it:free",
-      prompt: "hello"
+      prompt: "hello",
+      quiet: false
     });
   });
 
@@ -25,7 +26,17 @@ describe("parseArgv", () => {
     ).toEqual({
       type: "run-agent",
       model: "qwen/qwen3.8-27b:free",
-      prompt: "hello"
+      prompt: "hello",
+      quiet: false
+    });
+  });
+
+  it("parses --quiet alongside the prompt into run-agent", () => {
+    expect(parse("-p", "hello", "-m", "m", "--quiet")).toEqual({
+      type: "run-agent",
+      model: "m",
+      prompt: "hello",
+      quiet: true
     });
   });
 

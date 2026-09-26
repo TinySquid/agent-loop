@@ -18,13 +18,20 @@ export class HelpRequest extends Error {
 }
 
 export type CliCommand =
-  | { type: "run-agent"; model: string; prompt: string }
+  | {
+      type: "run-agent";
+      model: string;
+      prompt: string;
+      /** When true, suppress the live activity stream on stderr. */
+      quiet: boolean;
+    }
   | { type: "list-models" }
   | { type: "list-free-models" };
 
 interface ProgramOptions {
   prompt?: string;
   model?: string;
+  quiet?: boolean;
   listFreeModels?: boolean;
   listModels?: boolean;
 }
@@ -50,6 +57,11 @@ function buildProgram(): CommanderCommand {
     "model slug to run the agent with"
   ).conflicts(["listFreeModels", "listModels"]);
 
+  const quiet = new Option(
+    "--quiet",
+    "suppress the live activity stream; print only the final answer"
+  );
+
   const listFreeModels = new Option(
     "--list-free-models",
     "print free model slugs from the OpenRouter API"
@@ -62,6 +74,7 @@ function buildProgram(): CommanderCommand {
 
   program.addOption(prompt);
   program.addOption(model);
+  program.addOption(quiet);
   program.addOption(listFreeModels);
   program.addOption(listModels);
 
@@ -104,7 +117,12 @@ export function parseArgv(argv: readonly string[]): CliCommand {
         "error: -m, --model <slug> is required when running the agent with -p, --prompt <prompt>"
       );
     }
-    return { type: "run-agent", model: opts.model, prompt: opts.prompt };
+    return {
+      type: "run-agent",
+      model: opts.model,
+      prompt: opts.prompt,
+      quiet: opts.quiet ?? false
+    };
   }
   if (opts.listFreeModels) {
     return { type: "list-free-models" };

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { runAgent } from "../src/agent.js";
+import { runAgent, type AgentEvent } from "../src/agent.js";
 import type { ChatModel } from "../src/chat-model.js";
 import type { Tool } from "../src/tools.js";
 import type {
   ChatAssistantMessage,
   ChatMessages,
-  ChatToolCall
+  ChatStreamDelta,
+  ChatToolCall,
+  ChatUsage
 } from "@openrouter/sdk/models";
 
 /**
@@ -147,6 +149,116 @@ function scriptedTranscript(
 ): ChatMessages[] {
   return model.seenTranscripts[index] ?? [];
 }
+
+interface StreamedRound {
+  /** Deltas the model streams before the round completes. */
+  deltas: string[];
+  message: ChatAssistantMessage;
+  usage?: ChatUsage;
+}
+
+/**
+ * A streaming ChatModel: invokes the onChunk callback with each delta, then
+ * resolves with the fully assembled reply, like the OpenRouter adapter does.
+ */
+function streamingModel(script: StreamedRound[]): ChatModel {
+  const rounds = [...script];
+  return {
+    async complete(_turns, _tools, onChunk) {
+      const round = rounds.shift();
+      if (!round) throw new Error("script exhausted");
+      for (const text of round.deltas) {
+        onChunk?.({ content: text } satisfies ChatStreamDelta);
+      }
+      return {
+        id: "test-stream",
+        created: 0,
+        model: "scripted",
+        object: "chat.completion",
+        systemFingerprint: null,
+        usage: round.usage,
+        choices: [{ index: 0, finishReason: "stop", message: round.message }]
+      };
+    }
+  };
+}
+
+describe("runAgent streaming events", () => {
+  it("emits round, delta, tool-call, and aggregated usage events", async () => {
+    const events: AgentEvent[] = [];
+    const answer = await runAgent({
+      prompt: "what is 2+2?",
+      model: streamingModel([
+        {
+          deltas: ["let me ", "check."],
+          message: {
+            role: "assistant",
+            content: "let me check.",
+            toolCalls: [toolCall("plus", '{"a": 2, "b": 2}')]
+          },
+          usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 }
+        },
+        {
+          deltas: ["the ", "answer ", "is 4"],
+          message: { role: "assistant", content: "the answer is 4" },
+          usage: { promptTokens: 20, completionTokens: 7, totalTokens: 27 }
+        }
+      ]),
+      tools: [plusTool],
+      onEvent: (event) => events.push(event)
+    });
+
+    expect(answer).toBe("the answer is 4");
+    expect(events).toEqual([
+      { type: "round-start", round: 1 },
+      { type: "assistant-text", text: "let me " },
+      { type: "assistant-text", text: "check." },
+      {
+        type: "tool-call",
+        round: 1,
+        call: toolCall("plus", '{"a": 2, "b": 2}')
+      },
+      { type: "round-start", round: 2 },
+      { type: "assistant-text", text: "the " },
+      { type: "assistant-text", text: "answer " },
+      { type: "assistant-text", text: "is 4" },
+      {
+        type: "usage",
+        usage: { promptTokens: 30, completionTokens: 12, totalTokens: 42 }
+      }
+    ]);
+  });
+
+  it("emits no events when no onEvent is given", async () => {
+    const answer = await runAgent({
+      prompt: "hello",
+      model: streamingModel([
+        {
+          deltas: ["hi"],
+          message: { role: "assistant", content: "hi" }
+        }
+      ]),
+      tools: [plusTool]
+    });
+    expect(answer).toBe("hi");
+  });
+
+  it("emits a zero-usage event when the model reports no usage", async () => {
+    const events: AgentEvent[] = [];
+    await runAgent({
+      prompt: "hello",
+      model: streamingModel([
+        { deltas: ["hi"], message: { role: "assistant", content: "hi" } }
+      ]),
+      tools: [plusTool],
+      onEvent: (event) => events.push(event)
+    });
+    expect(events.at(-1)).toEqual({
+      type: "usage",
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+    });
+  });
+});
 
 function loopingScript(n: number): ChatAssistantMessage[] {
   return Array.from({ length: n }, () => ({
