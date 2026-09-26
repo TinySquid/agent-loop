@@ -46,13 +46,7 @@ export function coercePositiveInt(value: unknown): number | null {
 /** Notices are module-owned; a runaway resume hint is dropped past this. */
 const MAX_NOTICE_CHARS = 200;
 
-export interface BoundOptions {
-  /** Hard line ceiling for the kept window. */
-  maxLines: number;
-  /** Hard byte ceiling for the kept window. */
-  maxBytes: number;
-  /** Characters kept per line before inline truncation (long-line guard). */
-  maxLineChars: number;
+export interface BoundOptions extends TruncationCaps {
   /** 1-indexed display line of the window's first line (paging tools). */
   startLine?: number;
   /** Line total of the full content the window came from (paging tools). */
