@@ -4,8 +4,8 @@ One-shot terminal agent loop: takes `-p "prompt"`, calls a model through OpenRou
 
 ## Running the agent
 
-- `./agent.sh -p "what tools are available to you?"` — the wrapper loads `.env` and forwards args verbatim.
-- Without the wrapper: `npm run agent -- -p "..."` — npm requires the double dash before flags.
+- `./agent.sh -p "what tools are available to you?"` - the wrapper loads `.env` and forwards args verbatim.
+- Without the wrapper: `npm run agent -- -p "..."` - npm requires the double dash before flags.
 
 ## Code style
 
@@ -14,7 +14,7 @@ One-shot terminal agent loop: takes `-p "prompt"`, calls a model through OpenRou
 
 ## Testing
 
-- Tests live only in `tests/` — vitest's include is configured accordingly; don't colocate test files in `src/`.
+- Tests live only in `tests/` - vitest's include is configured accordingly; don't colocate test files in `src/`.
 - Add or update tests for the code you change, even if nobody asked.
 
 ## After changes

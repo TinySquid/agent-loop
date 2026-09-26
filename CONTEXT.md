@@ -15,7 +15,7 @@ A per-call input the model passes inside a tool call's arguments, declared in th
 _Avoid_: option, flag, setting
 
 **Tool option**:
-A construction-time knob fixed for the whole run, injected by code and invisible to the model (e.g. `capMs`, `maxBytes`). Every tool is built by a factory that takes an options object; options exist so tests can scale timings and sizes down — production always uses the defaults.
+A construction-time knob fixed for the whole run, injected by code and invisible to the model (e.g. `capMs`, `maxBytes`). Every tool is built by a factory that takes an options object; options exist so tests can scale timings and sizes down - production always uses the defaults.
 _Avoid_: config, environment setting
 
 **Truncation**:

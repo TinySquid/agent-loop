@@ -20,7 +20,7 @@ export async function executeToolCalls(
 
 /**
  * One call -> one result string. Every failure mode (unknown tool, unparseable
- * args, execute throwing) becomes error text the model can read and correct —
+ * args, execute throwing) becomes error text the model can read and correct -
  * never an exception that aborts the run.
  */
 async function toolContent(

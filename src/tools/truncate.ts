@@ -50,7 +50,7 @@ export interface BoundResult {
  * byte cap, cutting each oversized line to `maxLineChars` first. A trailing
  * newline does not count as an extra line. When content is cut, the result
  * carries the continuation notice telling the model exactly what it saw and
- * how to get more — the caller only places it.
+ * how to get more - the caller only places it.
  */
 export function boundedOutput(
   content: string,

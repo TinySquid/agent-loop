@@ -1,28 +1,32 @@
 # agent-loop
 
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D26-3c873a?style=flat-square)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square)](https://www.typescriptlang.org)
-[![OpenRouter](https://img.shields.io/badge/powered%20by-OpenRouter-0762d8?style=flat-square)](https://openrouter.ai)
+[![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square)](https://www.typescriptlang.org)
+[![OpenRouter](https://img.shields.io/badge/Powered%20by-OpenRouter-0762d8?style=flat-square)](https://openrouter.ai)
 
 > One-shot terminal agent loop powered by OpenRouter
 
-`agent-loop` takes a prompt, sends it to any model available on [OpenRouter](https://openrouter.ai), and iterates tool calls — reading files, running bash commands — until the model produces a final answer.
+`agent-loop` takes a prompt, sends it to a specified model available on [OpenRouter](https://openrouter.ai), and iterates tool calls - reading files, running bash commands - until the model produces a final answer.
 
-```
-prompt ──▶ model ──▶ tool calls ──▶ results ──▶ ... ──▶ final answer
+```mermaid
+flowchart LR
+    P([User prompt]) --> A[Agent]
+    A -->|system prompt<br>+ tools| M(("Model<br/>OpenRouter"))
+    M -->|assistant message| A
+    A -->|assistant tool calls| T{"Any tools<br/>requested?"}
+    T -->|no| F([Final answer])
+    T -->|yes| E[Execute tools<br>ReadFile / Bash]
+    E -->|tool results| M
 ```
 
 ## Features
 
-- **Agentic loop** — the model can chain tool calls over multiple rounds (up to 8 by default) until it reaches a final answer
-- **Built-in tools** — `ReadFile` for reading file contents, `Bash` for executing shell commands with timeout handling
-- **Any OpenRouter model** — run against paid or `:free` model slugs; list current ones straight from the CLI
-- **Streaming with clean pipes** — live activity (assistant text, tool calls, token usage) is streamed to stderr; the final answer is the only thing printed to stdout, so redirects and pipes capture clean output
-- **Flexible credentials** — API key via environment variable, or per-project/global YAML auth files
-- **Actionable errors** — OpenRouter API errors are rendered as readable, multi-line messages
-
-> [!NOTE]
-> This project is not published to npm yet. Run it from source as described below.
+- **Agentic loop** - the model can chain tool calls over multiple rounds (up to 8 by default) until it reaches a final answer.
+- **Built-in tools** - `ReadFile` for reading file contents, `Bash` for executing shell commands.
+- **Any OpenRouter model** - run against paid or `:free` model slugs; list available ones straight from the CLI.
+- **Streaming with clean pipes** - live activity (assistant text, tool calls, token usage) is streamed to stderr; the final answer is the only thing printed to stdout, so redirects and pipes capture clean output.
+- **Flexible credentials** - OpenRouter API key via environment variable, or per-project/global YAML auth file.
+- **Actionable errors** - OpenRouter API errors are rendered as readable, multi-line messages
 
 ## Requirements
 
@@ -33,7 +37,7 @@ prompt ──▶ model ──▶ tool calls ──▶ results ──▶ ... ─�
 ## Getting started
 
 ```bash
-git clone <repository-url> agent-loop
+git clone https://github.com/TinySquid/agent-loop.git agent-loop
 cd agent-loop
 npm install
 cp .env.example .env
@@ -45,22 +49,26 @@ cp .env.example .env
 ### Run the agent
 
 ```bash
-./agent.sh -p "what tools are available to you?" -m "google/gemma-4-31b-it:free"
+./agent.sh -p "what tools are available to you?" -m "qwen/qwen3.8-27b:free"
 ```
 
 `agent.sh` loads `.env` into the environment and forwards all arguments to the CLI. Without the wrapper:
 
 ```bash
-npm run agent -- -p "summarize package.json" -m "google/gemma-4-31b-it:free"
+npm run agent -- -p "summarize package.json" -m "qwen/qwen3.8-27b:free"
 ```
 
-> [!TIP]
-> npm requires the double dash (`--`) before flags when using `npm run agent`.
+> npm requires the double dash (`--`) before flags.
 
 The example slug above is a free model. Use `--list-free-models` to see the current free models, or `--list-models` for non-free ones:
 
 ```bash
 ./agent.sh --list-free-models
+
+cohere/north-mini-code:free
+google/gemma-4-31b-it:free
+inclusionai/ling-3.0-flash-sante:free
+...
 ```
 
 ### Command line options
@@ -89,7 +97,7 @@ While the agent runs, its activity streams to stderr (dimmed when attached to a 
 
 ```
 › round 1 · ReadFile(file_path=package.json)
-› round 2 · Bash(command=npm test -- --run)
+› round 2 · Bash(command=npm test)
 tokens: in 1893 · out 412
 ```
 
@@ -115,11 +123,11 @@ Auth files are YAML with a single `apiKey` entry:
 apiKey: sk-or-v1-...
 ```
 
-This lets you keep a per-project key in the workspace and a global fallback in your home directory, with the environment variable overriding both.
+The priority order for api key searching is `env -> working directory -> home directory`
 
 ## Tools
 
-The agent exposes two tools to the model. Tool failures are reported back to the model as error text it can act on — a failing command doesn't abort the run.
+The agent exposes tools to the model. Tool failures are reported back to the model as error text it can act on.
 
 | Tool       | Description                                                                                                             |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -128,8 +136,7 @@ The agent exposes two tools to the model. Tool failures are reported back to the
 
 When a bash command times out, the process is killed (SIGTERM, then SIGKILL after a 1s grace period) and partial output is returned with exit code 124.
 
-> [!WARNING]
-> The `Bash` tool executes whatever the model asks for, with the permissions of your user account. Review the live activity stream while it runs, and don't point it at anything you wouldn't run yourself.
+> The `Bash` tool executes whatever the model asks for, with no permission gating.
 
 ## Development
 
@@ -142,8 +149,6 @@ npm test             # vitest run
 npm run test:watch   # vitest in watch mode
 npm run build        # tsup build to dist/ (ESM, types, sourcemaps)
 ```
-
-Tests live in `tests/` only (vitest is configured accordingly) — don't colocate test files in `src/`.
 
 To install the CLI as a global `agent-loop` binary from source:
 

@@ -131,6 +131,6 @@ export function parseArgv(argv: readonly string[]): CliCommand {
     return { type: "list-models" };
   }
   throw new UsageError(
-    "error: nothing to do — pass -p/--prompt with -m/--model, or a --list flag"
+    "error: nothing to do - pass -p/--prompt with -m/--model, or a --list flag"
   );
 }
