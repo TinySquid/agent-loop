@@ -32,7 +32,7 @@ export const executeBashCommand: Tool = {
   type: "function",
   function: {
     name: "Bash",
-    description: "Execute a shell command",
+    description: `Execute a shell command in the current working directory (${process.cwd()})`,
     parameters: {
       type: "object",
       required: ["command"],
