@@ -9,7 +9,11 @@ export async function executeToolCalls(
   const results: ChatToolMessage[] = [];
   for (const call of calls) {
     const content = await toolContent(tools, call);
-    results.push({ role: "tool", toolCallId: call.id, content });
+    // Cohere (and any provider that maps tool results to a required `outputs`
+    // field) 400s on empty or whitespace-only tool results. Silent tools like
+    // `git add` produce "", so substitute a marker the model can still read.
+    const safeContent = content.trim() === "" ? "(no output)" : content;
+    results.push({ role: "tool", toolCallId: call.id, content: safeContent });
   }
   return results;
 }
