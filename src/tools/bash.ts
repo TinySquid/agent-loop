@@ -83,8 +83,8 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
       function: {
         name: "Bash",
         description:
-          "Execute a shell command in the current working directory " +
-          `(${process.cwd()}). Output is truncated to ${o.maxLines} lines or ` +
+          "Execute a shell command in the agent's process cwd (stated in the " +
+          `system prompt). Output is truncated to ${o.maxLines} lines or ` +
           `${Math.round(o.maxBytes / 1024)}KB (whichever is hit first); ` +
           "long lines are cut to " +
           `${o.maxLineChars} chars.`,

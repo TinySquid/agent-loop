@@ -10,6 +10,7 @@ import {
 import { openRouterModel } from "./openrouter-model";
 import { formatProviderError } from "./provider-error";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
+import { systemPrompt } from "./system-prompt";
 import { defaultTools } from "./tools";
 
 function printSlugs(models: readonly ModelInfo[], free: boolean): void {
@@ -88,12 +89,8 @@ async function dispatch(): Promise<void> {
     case "run-agent": {
       const credentials = resolveApiKey();
       const answer = await runAgent({
-        // TODO: extract system prompt.
         // TODO: decide if the agent should try and find a SYSTEM.md / AGENTS.md to use instead for this.
-        system:
-          `The current date is ${new Date()}\n` +
-          `You are running in the working directory: ${process.cwd()}. ` +
-          "Treat relative file paths as relative to this directory.",
+        system: systemPrompt(),
         prompt: command.prompt,
         model: openRouterModel(credentials, command.model),
         tools: defaultTools,

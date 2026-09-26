@@ -99,6 +99,14 @@ describe("deriveTimeout (fast options)", () => {
 });
 
 describe("createBashTool", () => {
+  it("defers the cwd fact to the run-context seam, not the literal path", () => {
+    // factories that interpolate process.cwd() at build time are untestable
+    // off the host and duplicated the system prompt's cwd fact
+    const tool = createBashTool(FAST_OPTIONS);
+    expect(tool.spec.function.description).not.toContain(process.cwd());
+    expect(tool.spec.function.description).toContain("process cwd");
+  });
+
   it("reflects the active options in the timeout_ms schema description", () => {
     const tool = createBashTool(FAST_OPTIONS);
     const parameters = tool.spec.function.parameters as
