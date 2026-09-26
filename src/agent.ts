@@ -19,6 +19,9 @@ export interface AgentRun {
   onEvent?: (event: AgentEvent) => void;
 }
 
+/** Rounds the loop may take before giving up, when maxRounds is omitted. */
+const DEFAULT_MAX_ROUNDS = 8;
+
 /** What happened while the loop ran, in the order it happened. */
 export type AgentEvent =
   | { type: "round-start"; round: number }
@@ -37,7 +40,8 @@ export async function runAgent(run: AgentRun): Promise<string> {
   const turns: ChatMessages[] = setInitialTurn(run.prompt, run.system);
   const totals = { promptTokens: 0, completionTokens: 0 };
 
-  for (let round = 1; round <= (run.maxRounds ?? 8); round++) {
+  const maxRounds = run.maxRounds ?? DEFAULT_MAX_ROUNDS;
+  for (let round = 1; round <= maxRounds; round++) {
     run.onEvent?.({ type: "round-start", round });
     const reply = await run.model.complete(turns, tools, streamToEvents(run));
     const message = reply.choices[0]?.message;
@@ -69,9 +73,7 @@ export async function runAgent(run: AgentRun): Promise<string> {
     }
     turns.push(...(await executeToolCalls(run.tools, calls)));
   }
-  throw new Error(
-    `agent exceeded ${run.maxRounds ?? 8} rounds without a final answer`
-  );
+  throw new Error(`agent exceeded ${maxRounds} rounds without a final answer`);
 }
 
 function streamToEvents(run: AgentRun): ChatChunkHandler | undefined {
