@@ -130,6 +130,45 @@ describe("runAgent", () => {
     expect(toolTurn?.content).toContain("unknown tool 'nope'");
   });
 
+  it("prepends the system prompt as the first turn when given", async () => {
+    const model = scriptedModel([{ role: "assistant", content: "done" }]);
+    await runAgent({
+      prompt: "read the file",
+      system: "You are running in /home/tinysquid/dev/agent-loop.",
+      model,
+      tools: [plusTool]
+    });
+
+    const transcript = scriptedTranscript(model, 0);
+    expect(transcript).toHaveLength(2);
+    expect(transcript[0]).toEqual({
+      role: "system",
+      content: "You are running in /home/tinysquid/dev/agent-loop."
+    });
+    expect(transcript[1]).toEqual({ role: "user", content: "read the file" });
+  });
+
+  it("carries the system turn forward on later rounds", async () => {
+    const model = scriptedModel([
+      {
+        role: "assistant",
+        content: null,
+        toolCalls: [toolCall("plus", '{"a": 2, "b": 2}')]
+      },
+      { role: "assistant", content: "4" }
+    ]);
+    await runAgent({
+      prompt: "what is 2+2?",
+      system: "You run in /tmp.",
+      model,
+      tools: [plusTool]
+    });
+
+    const second = scriptedTranscript(model, 1);
+    expect(second[0]).toEqual({ role: "system", content: "You run in /tmp." });
+    expect(second).toHaveLength(4); // system, user, assistant(toolCall), tool
+  });
+
   it("throws when the loop exceeds maxRounds", async () => {
     const model = scriptedModel(loopingScript(5));
     await expect(
