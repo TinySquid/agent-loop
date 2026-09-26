@@ -1,0 +1,220 @@
+import { describe, expect, it } from "vitest";
+import {
+  BASH_TIMEOUT_CAP_MS,
+  BASH_TIMEOUT_DEFAULT_MS,
+  DEFAULT_BASH_TIMEOUT_OPTIONS,
+  createBashTool,
+  createReadTool,
+  deriveTimeout
+} from "../src/tools/index.js";
+
+/** Production-style options, scaled down so timing tests stay fast. */
+const FAST_OPTIONS = {
+  defaultMs: 100,
+  capMs: 200,
+  sigkillGraceMs: 50
+};
+
+describe("deriveTimeout (production options)", () => {
+  it("defaults when timeout_ms is missing or invalid", () => {
+    expect(deriveTimeout(undefined, DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(
+      BASH_TIMEOUT_DEFAULT_MS
+    );
+    expect(deriveTimeout("not a number", DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(
+      BASH_TIMEOUT_DEFAULT_MS
+    );
+    expect(deriveTimeout(Number.NaN, DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(
+      BASH_TIMEOUT_DEFAULT_MS
+    );
+    expect(deriveTimeout(0, DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(
+      BASH_TIMEOUT_DEFAULT_MS
+    );
+    expect(deriveTimeout(-5, DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(
+      BASH_TIMEOUT_DEFAULT_MS
+    );
+  });
+
+  it("clamps values above the 120s cap to exactly the cap", () => {
+    expect(
+      deriveTimeout(BASH_TIMEOUT_CAP_MS * 100, DEFAULT_BASH_TIMEOUT_OPTIONS)
+    ).toBe(BASH_TIMEOUT_CAP_MS);
+  });
+
+  it("honors a request of exactly the cap unchanged", () => {
+    expect(
+      deriveTimeout(BASH_TIMEOUT_CAP_MS, DEFAULT_BASH_TIMEOUT_OPTIONS)
+    ).toBe(BASH_TIMEOUT_CAP_MS);
+  });
+
+  it("passes through in-range values", () => {
+    expect(deriveTimeout(1, DEFAULT_BASH_TIMEOUT_OPTIONS)).toBe(1);
+  });
+});
+
+describe("deriveTimeout (fast options)", () => {
+  it("clamps against the injected cap, not the production one", () => {
+    expect(deriveTimeout(500, FAST_OPTIONS)).toBe(FAST_OPTIONS.capMs);
+    expect(deriveTimeout(undefined, FAST_OPTIONS)).toBe(FAST_OPTIONS.defaultMs);
+  });
+});
+
+describe("createBashTool", () => {
+  it("reflects the active options in the timeout_ms schema description", () => {
+    const tool = createBashTool(FAST_OPTIONS);
+    const parameters = tool.function.parameters as
+      | {
+          properties?: { timeout_ms?: { description?: string } };
+        }
+      | undefined;
+    const description = parameters?.properties?.timeout_ms?.description ?? "";
+    expect(description).toContain("default 100");
+    expect(description).toContain("capped at 200");
+  });
+
+  it("returns stdout on success", async () => {
+    const result = await createBashTool(FAST_OPTIONS).execute({
+      command: "echo hello"
+    });
+    expect(result).toBe("hello\n");
+  });
+
+  it("includes stderr and exit code on failure", async () => {
+    const result = await createBashTool(FAST_OPTIONS).execute({
+      command: "echo oops >&2; exit 3"
+    });
+    expect(result).toContain("ERROR (Exit Code 3)");
+    expect(result).toContain("oops");
+  });
+
+  it("kills the command at the injected cap and returns exit 124 with partial output", async () => {
+    const tool = createBashTool(FAST_OPTIONS);
+    const start = Date.now();
+    const result = await tool.execute({
+      command: "echo partial; sleep 10",
+      timeout_ms: 500 // above the 200ms cap -> clamped to 200ms
+    });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(5_000);
+    expect(result).toContain("timed out after 200ms");
+    expect(result).toContain("partial");
+    expect(result).toContain("Exit Code 124");
+  });
+
+  it("uses the injected default when timeout_ms is omitted", async () => {
+    const tool = createBashTool({ ...FAST_OPTIONS, defaultMs: 150 });
+    const start = Date.now();
+    const result = await tool.execute({ command: "sleep 10" });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeGreaterThanOrEqual(140);
+    expect(elapsed).toBeLessThan(5_000);
+    expect(result).toContain("timed out after 150ms");
+  });
+
+  it("kills the whole process tree on timeout, not just bash", async () => {
+    const tool = createBashTool(FAST_OPTIONS);
+    const start = Date.now();
+    // sleep 125 is the case that found the bug: bash dies but an orphaned
+    // `sleep` holds the stdout pipe, so the result only arrives once the
+    // whole group is gone. Fast, because the cap is milliseconds.
+    const result = await tool.execute({
+      command: "sleep 125 && echo late",
+      timeout_ms: 500
+    });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(5_000);
+    expect(result).toContain("Exit Code 124");
+    expect(result).not.toContain("late");
+  });
+});
+
+describe("createReadTool", () => {
+  /** Small fixture file inside the repo (trailing newline included). */
+  const FIXTURE = "tests/fixtures/read-sample.txt";
+  /** One 40-char line, for long-line truncation tests. */
+  const LONG_LINE = "tests/fixtures/read-long-line.txt";
+
+  it("reads a file with numbered lines", async () => {
+    const tool = createReadTool();
+    const result = await tool.execute({ file_path: FIXTURE });
+    expect(result).toContain("1: alpha");
+    expect(result).toContain("3: gamma");
+  });
+
+  it("honors offset (1-indexed) and limit", async () => {
+    const tool = createReadTool();
+    const result = await tool.execute({
+      file_path: FIXTURE,
+      offset: 2,
+      limit: 1
+    });
+    expect(result).toContain("2: beta");
+    expect(result).not.toContain("alpha");
+    expect(result).toContain("Showing lines 2-2 of 3");
+  });
+
+  it("appends a continuation notice when the line limit truncates", async () => {
+    const tool = createReadTool({
+      maxLines: 2,
+      maxBytes: 50_000,
+      maxLineChars: 2000
+    });
+    const result = await tool.execute({ file_path: FIXTURE });
+    expect(result).toContain("Showing lines 1-2 of 3");
+    expect(result).toContain("(lines limit)");
+    expect(result).toContain("Use offset=3 to continue");
+  });
+
+  it("same continuation notice when a caller-supplied limit stops early", async () => {
+    const tool = createReadTool();
+    const result = await tool.execute({ file_path: FIXTURE, limit: 1 });
+    expect(result).toContain("Showing lines 1-1 of 3");
+  });
+
+  it("enforces the byte cap with a continuation notice", async () => {
+    const tool = createReadTool({
+      maxLines: 2000,
+      maxBytes: 12,
+      maxLineChars: 2000
+    });
+    const result = await tool.execute({ file_path: FIXTURE });
+    expect(result).toContain("bytes limit");
+    expect(result).toContain("Use offset=");
+  });
+
+  it("inline-truncates an oversized line", async () => {
+    const tool = createReadTool({
+      maxLines: 2000,
+      maxBytes: 50_000,
+      maxLineChars: 5
+    });
+    const result = await tool.execute({ file_path: LONG_LINE });
+    expect(result).toContain("line truncated to 5 chars");
+  });
+
+  it("errors on offset beyond end of file", async () => {
+    const tool = createReadTool();
+    await expect(
+      tool.execute({ file_path: FIXTURE, offset: 999 })
+    ).rejects.toThrow(/beyond end of file/);
+  });
+
+  it("errors on a missing file", async () => {
+    const tool = createReadTool();
+    await expect(
+      tool.execute({ file_path: "tests/fixtures/no-such-file.txt" })
+    ).rejects.toThrow(/ENOENT/);
+  });
+
+  it("reflects the active options in the schema description", () => {
+    const tool = createReadTool({
+      maxLines: 7,
+      maxBytes: 1024,
+      maxLineChars: 80
+    });
+    expect(tool.function.description).toContain("truncated to 7 lines");
+    expect(tool.function.description).toContain("1KB");
+  });
+});

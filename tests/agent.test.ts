@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runAgent, type AgentEvent } from "../src/agent.js";
 import type { ChatModel } from "../src/chat-model.js";
-import type { Tool } from "../src/tools.js";
+import type { Tool } from "../src/tools/index.js";
 import type {
   ChatAssistantMessage,
   ChatMessages,

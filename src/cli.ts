@@ -10,7 +10,7 @@ import {
 import { openRouterModel } from "./openrouter-model";
 import { formatProviderError } from "./provider-error";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
-import { executeBashCommand, readFile } from "./tools";
+import { defaultTools } from "./tools";
 
 function printSlugs(models: readonly ModelInfo[], free: boolean): void {
   const slugs = free ? freeModelSlugs(models) : paidModelSlugs(models);
@@ -96,7 +96,7 @@ async function dispatch(): Promise<void> {
           "Treat relative file paths as relative to this directory.",
         prompt: command.prompt,
         model: openRouterModel(credentials, command.model),
-        tools: [readFile, executeBashCommand],
+        tools: defaultTools,
         onEvent: command.quiet ? undefined : agentEventPrinter()
       });
       console.log(answer);

@@ -4,6 +4,24 @@ A one-shot terminal agent: takes a prompt, calls a model through OpenRouter, and
 
 ## Language
 
+### Tools
+
+**Tool parameter**:
+A per-call input the model passes inside a tool call's arguments, declared in the tool's schema (e.g. `timeout_ms`, `offset`, `limit`).
+_Avoid_: option, flag, setting
+
+**Tool option**:
+A construction-time knob fixed for the whole run, injected by code and invisible to the model (e.g. `capMs`, `maxBytes`). Every tool is built by a factory that takes an options object; options exist so tests can scale timings and sizes down — production always uses the defaults.
+_Avoid_: config, environment setting
+
+**Truncation**:
+The head-truncation every bounding tool applies to its own output: first N lines subject to a byte cap, whichever limit is hit first, never partial lines. Oversized lines are cut inline to the per-line char cap. The tool, not the model, is responsible for keeping tool output bounded.
+_Avoid_: clipping, cutting, pruned output
+
+**Continuation notice**:
+The message appended to truncated tool output telling the model exactly what it saw and how to get more (e.g. `[Showing lines 1–2000 of 3500 (lines limit). Use offset=2001 to continue.]`). Makes paging self-healing: the model never guesses the next offset.
+_Avoid_: ellipsis, "..." marker
+
 ### Invocation
 
 **Prompt**:

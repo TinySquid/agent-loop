@@ -1,7 +1,7 @@
 import type { ChatToolMessage } from "@openrouter/sdk/models";
 import { describe, expect, it } from "vitest";
 import { executeToolCalls } from "../src/tool-execution.js";
-import type { Tool } from "../src/tools.js";
+import type { Tool } from "../src/tools/index.js";
 
 function echoTool(output: string): Tool {
   return {
