@@ -7,6 +7,7 @@ import {
   type ModelInfo
 } from "./model-list";
 import { openRouterModel } from "./openrouter-model";
+import { formatProviderError } from "./provider-error";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
 import { readFile } from "./tools";
 
@@ -50,8 +51,12 @@ try {
     console.error(`${error.message}\n\n${usageText()}`);
     process.exitCode = 1;
   } else {
+    const provider = formatProviderError(error);
     console.error(
-      error instanceof Error ? error.message : `unknown error: ${String(error)}`
+      provider ??
+        (error instanceof Error
+          ? error.message
+          : `unknown error: ${String(error)}`)
     );
     process.exitCode = 1;
   }
