@@ -10,7 +10,7 @@ import {
 import { openRouterModel } from "./openrouter-model";
 import { formatProviderError } from "./provider-error";
 import { HelpRequest, parseArgv, usageText, UsageError } from "./parse-args";
-import { readFile } from "./tools";
+import { executeBashCommand, readFile } from "./tools";
 
 function printSlugs(models: readonly ModelInfo[], free: boolean): void {
   const slugs = free ? freeModelSlugs(models) : paidModelSlugs(models);
@@ -90,7 +90,7 @@ async function dispatch(): Promise<void> {
       const answer = await runAgent({
         prompt: command.prompt,
         model: openRouterModel(credentials, command.model),
-        tools: [readFile],
+        tools: [readFile, executeBashCommand],
         onEvent: command.quiet ? undefined : agentEventPrinter()
       });
       console.log(answer);
