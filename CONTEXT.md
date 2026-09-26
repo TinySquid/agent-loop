@@ -6,6 +6,10 @@ A one-shot terminal agent: takes a prompt, calls a model through OpenRouter, and
 
 ### Tools
 
+**Tool spec**:
+The wire-safe model half of a tool: the OpenRouter function schema (name, description, parameters, and any schema-only fields) that crosses the wire. Every tool carries its spec alongside its implementation; the projection onto the wire lives in one place, so an implementation half never reaches the model.
+_Avoid_: tool definition, wire shape, bare schema
+
 **Tool parameter**:
 A per-call input the model passes inside a tool call's arguments, declared in the tool's schema (e.g. `timeout_ms`, `offset`, `limit`).
 _Avoid_: option, flag, setting
