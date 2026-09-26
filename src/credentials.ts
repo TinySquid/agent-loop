@@ -87,10 +87,14 @@ export function resolveApiKey(env: CredentialEnv = realEnv): Credentials {
 
 function loadApiKeyFromFile(env: CredentialEnv): Credentials {
   const locations = getAuthLocations(env);
-  const location = locations.find((l) => env.exists(l.filepath));
+  const location = locations.find((candidate) =>
+    env.exists(candidate.filepath)
+  );
 
   if (!location) {
-    const searched = locations.map((l) => `'${l.filepath}'`).join(" or ");
+    const searched = locations
+      .map((candidate) => `'${candidate.filepath}'`)
+      .join(" or ");
     throw new AuthConfigError(
       `Auth file '${AUTH_FILENAME}' is missing. Create one at ${searched}, or set env '${ENV_KEY_NAME}'.`
     );

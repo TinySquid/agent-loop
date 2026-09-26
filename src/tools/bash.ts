@@ -59,12 +59,12 @@ export function deriveTimeout(
  * is truncated with a continuation notice like every other tool.
  */
 export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
-  const o = { ...DEFAULT_BASH_OPTIONS, ...options };
+  const settings = { ...DEFAULT_BASH_OPTIONS, ...options };
   const bound = (raw: string): string =>
     boundedOutput(raw, {
-      maxLines: o.maxLines,
-      maxBytes: o.maxBytes,
-      maxLineChars: o.maxLineChars
+      maxLines: settings.maxLines,
+      maxBytes: settings.maxBytes,
+      maxLineChars: settings.maxLineChars
       // no resumeHint: a finished command's output is not pageable
     }).text;
   return {
@@ -74,10 +74,10 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
         name: "Bash",
         description:
           "Execute a shell command in the agent's process cwd (stated in the " +
-          `system prompt). Output is truncated to ${o.maxLines} lines or ` +
-          `${Math.round(o.maxBytes / 1024)}KB (whichever is hit first); ` +
+          `system prompt). Output is truncated to ${settings.maxLines} lines or ` +
+          `${Math.round(settings.maxBytes / 1024)}KB (whichever is hit first); ` +
           "long lines are cut to " +
-          `${o.maxLineChars} chars.`,
+          `${settings.maxLineChars} chars.`,
         parameters: {
           type: "object",
           required: ["command"],
@@ -95,7 +95,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
       }
     },
     async execute(args) {
-      const timeoutMs = deriveTimeout(args.timeout_ms, o);
+      const timeoutMs = deriveTimeout(args.timeout_ms, settings);
 
       // Own process group so a timeout can kill the whole tree:
       // `bash -c "sleep 300"` forks `sleep`; killing bash alone leaves the
@@ -142,7 +142,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
           killTree("SIGTERM");
           sigkillTimer = setTimeout(
             () => killTree("SIGKILL"),
-            options.sigkillGraceMs
+            settings.sigkillGraceMs
           );
         }, timeoutMs);
 
