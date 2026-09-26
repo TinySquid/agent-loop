@@ -18,9 +18,6 @@ const FAST_OPTIONS = {
   sigkillGraceMs: 50
 };
 
-/** Caps whose only active axis is the one a test overrides. */
-const UNBOUNDED_CAPS = TRUNCATION_CAPS;
-
 describe("toolSpecs", () => {
   const specOnly: Tool = {
     spec: {
@@ -196,7 +193,7 @@ describe("createBashTool", () => {
   it("truncates runaway stdout with a continuation notice", async () => {
     const tool = createBashTool({
       ...FAST_OPTIONS,
-      ...UNBOUNDED_CAPS,
+      ...TRUNCATION_CAPS,
       maxLines: 3
     });
     const result = await tool.execute({ command: "seq 100" });
@@ -209,7 +206,7 @@ describe("createBashTool", () => {
   it("truncates error output too, keeping the error frame head", async () => {
     const tool = createBashTool({
       ...FAST_OPTIONS,
-      ...UNBOUNDED_CAPS,
+      ...TRUNCATION_CAPS,
       maxLines: 3
     });
     const result = await tool.execute({
@@ -261,7 +258,7 @@ describe("createReadTool", () => {
 
   it("appends a continuation notice when the line limit truncates", async () => {
     const tool = createReadTool({
-      ...UNBOUNDED_CAPS,
+      ...TRUNCATION_CAPS,
       maxLines: 2
     });
     const result = await tool.execute({ file_path: FIXTURE });
