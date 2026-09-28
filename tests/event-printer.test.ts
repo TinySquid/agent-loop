@@ -13,6 +13,7 @@ function captureStderr(): {
   const writes: string[] = [];
   vi.spyOn(process.stderr, "write").mockImplementation(((chunk: unknown) => {
     writes.push(String(chunk));
+
     return true;
   }) as never);
   return { text: () => writes.join("") };
@@ -48,22 +49,26 @@ describe("agentEventPrinter", () => {
 
   it("closes streamed text with a newline before a tool-call line", () => {
     const captured = captureStderr();
+
     const print = agentEventPrinter();
+
     print({ type: "assistant-text", text: "let me check." });
     print(toolCall("read", '{"file_path": "a.txt"}'));
 
     expect(captured.text()).toBe(
-      "let me check.\n› round 1 · read(file_path=a.txt)\n"
+      "let me check.\n> round 1 | read(file_path=a.txt)\n"
     );
   });
 
   it("closes streamed text with a newline before the usage line", () => {
     const captured = captureStderr();
+
     const print = agentEventPrinter();
+
     print({ type: "assistant-text", text: "done." });
     print(usage);
 
-    expect(captured.text()).toBe("done.\ntokens: in 3 · out 2\n");
+    expect(captured.text()).toBe("done.\ntokens: in 3 | out 2\n");
   });
 
   it("previews tool arguments as key=value pairs", () => {
@@ -86,24 +91,30 @@ describe("agentEventPrinter", () => {
 
   it("falls back to the raw argument string when it is not JSON", () => {
     const captured = captureStderr();
+
     agentEventPrinter()(toolCall("Bash", "not json"));
+
     expect(captured.text()).toContain("not json");
   });
 
   it("renders round-start events as nothing", () => {
     const captured = captureStderr();
+
     agentEventPrinter()({ type: "round-start", round: 7 });
+
     expect(captured.text()).toBe("");
   });
 
   it("separates consecutive tool-call lines with newlines even without streamed text", () => {
     const captured = captureStderr();
+
     const print = agentEventPrinter();
+
     print(toolCall("Bash", '{"command": "ls"}'));
     print(toolCall("read", '{"file_path": "b.txt"}'));
 
     expect(captured.text()).toBe(
-      "› round 1 · Bash(command=ls)\n› round 1 · read(file_path=b.txt)\n"
+      "> round 1 | Bash(command=ls)\n> round 1 | read(file_path=b.txt)\n"
     );
   });
 });

@@ -6,11 +6,12 @@ function dim(text: string): string {
 }
 
 function truncatePreview(text: string, max = 60): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+  return text.length <= max ? text : `${text.slice(0, max - 1)}...`;
 }
 
 function argsPreview(call: ChatToolCall): string {
   const raw = call.function.arguments;
+
   try {
     const args = JSON.parse(raw) as Record<string, unknown>;
     const rendered = Object.entries(args)
@@ -34,28 +35,36 @@ export function agentEventPrinter(): (event: AgentEvent) => void {
       case "assistant-text":
         process.stderr.write(dim(event.text));
         midText = true;
+
         return;
       case "tool-call": {
         if (midText) {
           process.stderr.write("\n");
+
           midText = false;
         }
+
         const args = argsPreview(event.call);
+
         process.stderr.write(
-          `${dim(`› round ${event.round} · ${event.call.function.name}(${args})`)}\n`
+          `${dim(`> round ${event.round} | ${event.call.function.name}(${args})`)}\n`
         );
+
         return;
       }
       case "usage":
         if (midText) {
           process.stderr.write("\n");
+
           midText = false;
         }
+
         process.stderr.write(
           dim(
-            `tokens: in ${event.usage.promptTokens} · out ${event.usage.completionTokens}\n`
+            `tokens: in ${event.usage.promptTokens} | out ${event.usage.completionTokens}\n`
           )
         );
+
         return;
       case "round-start":
         return;
