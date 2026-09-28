@@ -8,37 +8,7 @@
 
 `agent-loop` takes a prompt, sends it to a specified model available on [OpenRouter](https://openrouter.ai), and iterates tool calls - reading files, running bash commands - until the model produces a final answer.
 
-```mermaid
-flowchart TD
-    subgraph Main[" "]
-        direction LR
-        P([User prompt]) --> A[Agent]
-        A -->|"system prompt<br/>+ tools"| M(("Model<br/>OpenRouter"))
-        M -->|"assistant<br/>message"| A
-        A -->|"assistant<br/>tool calls"| T{"Any tools<br/>requested?"}
-        T -->|No| F([Final answer])
-        T -->|Yes| E["Execute tools<br/>read / Bash"]
-        E -->|"tool results"| M
-    end
-
-    subgraph Legend["Legend"]
-        direction LR
-        L1([Input / Output]) ~~~ L2[Process] ~~~ L3{Decision} ~~~ L4((Model call))
-    end
-
-    Main ~~~ Legend
-
-    classDef io fill:#d4f4dd,stroke:#2d8a4e,stroke-width:2px,color:#000
-    classDef process fill:#dae8fc,stroke:#4472c4,stroke-width:2px,color:#000
-    classDef decision fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000
-    classDef model fill:#e6d9f2,stroke:#8e44ad,stroke-width:2px,color:#000
-    style Main fill:none,stroke:none
-
-    class P,F,L1 io
-    class A,E,L2 process
-    class T,L3 decision
-    class M,L4 model
-```
+![Architecture diagram of the agent loop](docs/agent-loop-mermaid-diagram.png)
 
 ## Features
 
