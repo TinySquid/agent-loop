@@ -56,6 +56,7 @@ export function createReadTool(
     async execute(args) {
       const filePath = String(args.file_path);
       const raw = await fs.promises.readFile(filePath, "utf-8");
+
       // A trailing newline terminates the last line, it is not a line of its
       // own. Strip one so line counts match what an editor shows.
       const trimmed = raw.endsWith("\n") ? raw.slice(0, -1) : raw;
@@ -76,9 +77,11 @@ export function createReadTool(
       });
 
       const numberStart = start + 1; // display numbering is 1-indexed
+
       const numbered = result.lines.map(
         (line, i) => `${numberStart + i}: ${line}`
       );
+
       return result.notice === ""
         ? numbered.join("\n")
         : `${numbered.join("\n")}\n\n${result.notice}`;

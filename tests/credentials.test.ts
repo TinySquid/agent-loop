@@ -26,6 +26,7 @@ describe("resolveApiKey", () => {
     const { apiKey, source } = resolveApiKey(
       fakeEnv({}, { OPENROUTER_API_KEY: "env-key" })
     );
+
     expect(apiKey).toBe("env-key");
     expect(source).toBe("env");
   });
@@ -64,6 +65,7 @@ describe("resolveApiKey", () => {
 
   it("throws AuthConfigError listing searched paths when no auth file exists", () => {
     expect(() => resolveApiKey(fakeEnv())).toThrow(AuthConfigError);
+
     expect(() => resolveApiKey(fakeEnv())).toThrow(
       /'\/project\/\.agent-loop\/auth\.yaml' or '\/home\/tester\/\.config\/agent-loop\/auth\.yaml'/
     );
@@ -71,32 +73,39 @@ describe("resolveApiKey", () => {
 
   it("throws on an empty auth file", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: "   \n" });
+
     expect(() => resolveApiKey(env)).toThrow(/is empty/);
   });
 
   it("throws on an unparseable auth file", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: "apiKey: [unclosed" });
+
     expect(() => resolveApiKey(env)).toThrow(AuthConfigError);
+
     expect(() => resolveApiKey(env)).toThrow(/could not be parsed/);
   });
 
   it("throws on a structurally invalid auth file", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: "just a string" });
+
     expect(() => resolveApiKey(env)).toThrow(/structure invalid/);
   });
 
   it("throws when the auth file has no apiKey entry", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: "other: value" });
+
     expect(() => resolveApiKey(env)).toThrow(/missing a usable 'apiKey'/);
   });
 
   it("throws when the apiKey entry is not a string", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: "apiKey: 123" });
+
     expect(() => resolveApiKey(env)).toThrow(/missing a usable 'apiKey'/);
   });
 
   it("throws when the apiKey entry is an empty string", () => {
     const env = fakeEnv({ [WORKSPACE_AUTH_FILE]: 'apiKey: ""' });
+
     expect(() => resolveApiKey(env)).toThrow(/missing a usable 'apiKey'/);
   });
 });

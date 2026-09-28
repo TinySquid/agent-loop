@@ -92,6 +92,7 @@ describe("assembleChatStream", () => {
     ]);
 
     const [first, second] = result.choices[0]?.message.toolCalls ?? [];
+
     expect(first).toEqual({
       id: "call-1",
       type: "function",

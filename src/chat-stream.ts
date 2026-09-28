@@ -21,7 +21,9 @@ export function assembleChatStream(
     if (chunkData.usage) usage = chunkData.usage;
     for (const choice of chunkData.choices) {
       const delta = choice.delta;
+
       if (delta.content) content.push(delta.content);
+
       for (const fragment of delta.toolCalls ?? []) {
         const merged = toolCalls.get(fragment.index) ?? {
           id: "",
@@ -33,8 +35,10 @@ export function assembleChatStream(
           merged.function.name = fragment.function.name;
         if (fragment.function?.arguments)
           merged.function.arguments += fragment.function.arguments;
+
         toolCalls.set(fragment.index, merged);
       }
+
       if (choice.finishReason) finishReason = choice.finishReason;
     }
   }
@@ -44,6 +48,7 @@ export function assembleChatStream(
     .sort((a, b) => a - b)
     .map((i) => toolCalls.get(i)!);
   const last = chunks[chunks.length - 1];
+
   return {
     id: last?.id ?? "",
     created: last?.created ?? 0,

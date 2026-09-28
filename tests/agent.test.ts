@@ -23,8 +23,11 @@ function scriptedModel(
     seenTranscripts,
     async complete(turns) {
       seenTranscripts.push([...turns]);
+
       const next = script.shift();
+
       if (!next) throw new Error("script exhausted");
+
       return {
         id: "test-completion",
         created: 0,
@@ -69,6 +72,7 @@ const plusTool: Tool = {
 describe("runAgent", () => {
   it("returns the model's answer directly when no tool calls occur", async () => {
     const model = scriptedModel([{ role: "assistant", content: "the answer" }]);
+
     const answer = await runAgent({
       prompt: "hello",
       model,
@@ -98,7 +102,9 @@ describe("runAgent", () => {
 
     // second round transcript: user -> assistant(toolCall) -> tool result
     expect(model.seenTranscripts).toHaveLength(2);
+
     const second = model.seenTranscripts[1] ?? [];
+
     expect(second).toHaveLength(3);
     expect(second[1]).toMatchObject({ role: "assistant" });
     expect(second[2]).toMatchObject({
@@ -117,23 +123,28 @@ describe("runAgent", () => {
       },
       { role: "assistant", content: "recovered" }
     ]);
+
     const answer = await runAgent({
       prompt: "try it",
       model,
       tools: [plusTool]
     });
+
     expect(answer).toBe("recovered");
 
     // the second-round transcript should carry an error tool-result turn
     const transcript = scriptedTranscript(model, 1);
+
     const toolTurn = transcript.find((t) => t.role === "tool") as
       { content: string } | undefined;
+
     expect(toolTurn?.content).toContain("error:");
     expect(toolTurn?.content).toContain("unknown tool 'nope'");
   });
 
   it("prepends the system prompt as the first turn when given", async () => {
     const model = scriptedModel([{ role: "assistant", content: "done" }]);
+
     await runAgent({
       prompt: "read the file",
       system: "You are running in /home/tinysquid/dev/agent-loop.",
@@ -142,6 +153,7 @@ describe("runAgent", () => {
     });
 
     const transcript = scriptedTranscript(model, 0);
+
     expect(transcript).toHaveLength(2);
     expect(transcript[0]).toEqual({
       role: "system",
@@ -159,6 +171,7 @@ describe("runAgent", () => {
       },
       { role: "assistant", content: "4" }
     ]);
+
     await runAgent({
       prompt: "what is 2+2?",
       system: "You run in /tmp.",
@@ -167,12 +180,14 @@ describe("runAgent", () => {
     });
 
     const second = scriptedTranscript(model, 1);
+
     expect(second[0]).toEqual({ role: "system", content: "You run in /tmp." });
     expect(second).toHaveLength(4); // system, user, assistant(toolCall), tool
   });
 
   it("throws when the loop exceeds maxRounds", async () => {
     const model = scriptedModel(loopingScript(5));
+
     await expect(
       runAgent({
         prompt: "loop forever",
@@ -207,10 +222,13 @@ function streamingModel(script: StreamedRound[]): ChatModel {
   return {
     async complete(_turns, _tools, onChunk) {
       const round = rounds.shift();
+
       if (!round) throw new Error("script exhausted");
+
       for (const text of round.deltas) {
         onChunk?.({ content: text } satisfies ChatStreamDelta);
       }
+
       return {
         id: "test-stream",
         created: 0,
@@ -227,6 +245,7 @@ function streamingModel(script: StreamedRound[]): ChatModel {
 describe("runAgent streaming events", () => {
   it("emits round, delta, tool-call, and aggregated usage events", async () => {
     const events: AgentEvent[] = [];
+
     const answer = await runAgent({
       prompt: "what is 2+2?",
       model: streamingModel([
@@ -250,6 +269,7 @@ describe("runAgent streaming events", () => {
     });
 
     expect(answer).toBe("the answer is 4");
+
     expect(events).toEqual([
       { type: "round-start", round: 1 },
       { type: "assistant-text", text: "let me " },
@@ -286,6 +306,7 @@ describe("runAgent streaming events", () => {
 
   it("emits a zero-usage event when the model reports no usage", async () => {
     const events: AgentEvent[] = [];
+
     await runAgent({
       prompt: "hello",
       model: streamingModel([
@@ -294,6 +315,7 @@ describe("runAgent streaming events", () => {
       tools: [plusTool],
       onEvent: (event) => events.push(event)
     });
+
     expect(events.at(-1)).toEqual({
       type: "usage",
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }

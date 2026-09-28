@@ -34,6 +34,7 @@ function extractModels(body: unknown): ModelInfo[] {
     typeof body === "object" && body !== null
       ? (body as { data?: unknown }).data
       : undefined;
+
   if (!Array.isArray(data) || !data.every(isModelInfo)) {
     throw new ModelListError(
       "Model list fetch failed: unexpected response shape from the OpenRouter API."
@@ -67,11 +68,14 @@ export async function fetchModels(
   }
 
   try {
-    return extractModels(await response.json());
+    const body: unknown = await response.json();
+
+    return extractModels(body);
   } catch (error) {
     if (error instanceof ModelListError) {
       throw error;
     }
+
     throw new ModelListError(
       `Model list fetch failed: invalid JSON from the OpenRouter API (${
         error instanceof Error ? error.message : String(error)

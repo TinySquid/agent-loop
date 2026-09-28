@@ -7,14 +7,18 @@ export async function executeToolCalls(
   calls: readonly ChatToolCall[]
 ): Promise<ChatToolMessage[]> {
   const results: ChatToolMessage[] = [];
+
   for (const call of calls) {
     const content = await toolContent(tools, call);
+
     // Cohere (and any provider that maps tool results to a required `outputs`
     // field) 400s on empty or whitespace-only tool results. Silent tools like
     // `git add` produce "", so substitute a marker the model can still read.
     const safeContent = content.trim() === "" ? "(no output)" : content;
+
     results.push({ role: "tool", toolCallId: call.id, content: safeContent });
   }
+
   return results;
 }
 
@@ -28,8 +32,10 @@ async function toolContent(
   call: ChatToolCall
 ): Promise<string> {
   const tool = tools.find((t) => t.spec.function.name === call.function.name);
+
   if (!tool) {
     const known = tools.map((t) => t.spec.function.name).join(", ");
+
     return toolError(
       `unknown tool '${call.function.name}'. known tools: ${known}`
     );

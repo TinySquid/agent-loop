@@ -21,6 +21,7 @@ export type ToolSpec = ChatFunctionToolFunction;
 export interface Tool {
   /** The model half: exactly what belongs on the wire. */
   spec: ToolSpec;
+  /** The execution half: what the agent runs. */
   execute(args: Record<string, unknown>): Promise<string>;
 }
 

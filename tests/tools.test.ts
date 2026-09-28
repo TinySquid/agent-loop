@@ -149,7 +149,9 @@ describe("createBashTool", () => {
 
   it("kills the command at the injected cap and returns exit 124 with partial output", async () => {
     const tool = createBashTool(FAST_OPTIONS);
+
     const start = Date.now();
+
     const result = await tool.execute({
       command: "echo partial; sleep 10",
       timeout_ms: 500 // above the 200ms cap -> clamped to 200ms
@@ -164,7 +166,9 @@ describe("createBashTool", () => {
 
   it("uses the injected default when timeout_ms is omitted", async () => {
     const tool = createBashTool({ ...FAST_OPTIONS, defaultMs: 150 });
+
     const start = Date.now();
+
     const result = await tool.execute({ command: "sleep 10" });
     const elapsed = Date.now() - start;
 
@@ -175,7 +179,9 @@ describe("createBashTool", () => {
 
   it("kills the whole process tree on timeout, not just bash", async () => {
     const tool = createBashTool(FAST_OPTIONS);
+
     const start = Date.now();
+
     // sleep 125 is the case that found the bug: bash dies but an orphaned
     // `sleep` holds the stdout pipe, so the result only arrives once the
     // whole group is gone. Fast, because the cap is milliseconds.
@@ -196,7 +202,9 @@ describe("createBashTool", () => {
       ...TRUNCATION_CAPS,
       maxLines: 3
     });
+
     const result = await tool.execute({ command: "seq 100" });
+
     expect(result.split("\n\n")[0]?.split("\n")).toHaveLength(3);
     expect(result).toContain("(lines limit)");
     // a finished command's output is not pageable: no offset tail
@@ -212,6 +220,7 @@ describe("createBashTool", () => {
     const result = await tool.execute({
       command: "seq 100 >&2; exit 7"
     });
+
     expect(result).toContain("ERROR (Exit Code 7)");
     expect(result).toContain("(lines limit)");
     // 3 kept lines, blank separator, notice
@@ -226,7 +235,9 @@ describe("createBashTool", () => {
       maxBytes: 50_000,
       maxLineChars: 10
     });
+
     const result = await tool.execute({ command: "echo aaaaaaaaaaaaaaaaaaaa" });
+
     expect(result).toContain("line truncated to 10 chars");
   });
 });
@@ -239,18 +250,22 @@ describe("createReadTool", () => {
 
   it("reads a file with numbered lines", async () => {
     const tool = createReadTool();
+
     const result = await tool.execute({ file_path: FIXTURE });
+
     expect(result).toContain("1: alpha");
     expect(result).toContain("3: gamma");
   });
 
   it("honors offset (1-indexed) and limit", async () => {
     const tool = createReadTool();
+
     const result = await tool.execute({
       file_path: FIXTURE,
       offset: 2,
       limit: 1
     });
+
     expect(result).toContain("2: beta");
     expect(result).not.toContain("alpha");
     expect(result).toContain("Showing lines 2-2 of 3");
@@ -261,7 +276,9 @@ describe("createReadTool", () => {
       ...TRUNCATION_CAPS,
       maxLines: 2
     });
+
     const result = await tool.execute({ file_path: FIXTURE });
+
     expect(result).toContain("Showing lines 1-2 of 3");
     expect(result).toContain("(lines limit)");
     expect(result).toContain("Use offset=3 to continue");
@@ -269,7 +286,9 @@ describe("createReadTool", () => {
 
   it("same continuation notice when a caller-supplied limit stops early", async () => {
     const tool = createReadTool();
+
     const result = await tool.execute({ file_path: FIXTURE, limit: 1 });
+
     expect(result).toContain("Showing lines 1-1 of 3");
   });
 
@@ -279,7 +298,9 @@ describe("createReadTool", () => {
       maxBytes: 12,
       maxLineChars: 2000
     });
+
     const result = await tool.execute({ file_path: FIXTURE });
+
     expect(result).toContain("bytes limit");
     expect(result).toContain("Use offset=");
   });
@@ -290,12 +311,15 @@ describe("createReadTool", () => {
       maxBytes: 50_000,
       maxLineChars: 5
     });
+
     const result = await tool.execute({ file_path: LONG_LINE });
+
     expect(result).toContain("line truncated to 5 chars");
   });
 
   it("errors on offset beyond end of file", async () => {
     const tool = createReadTool();
+
     await expect(
       tool.execute({ file_path: FIXTURE, offset: 999 })
     ).rejects.toThrow(/beyond end of file/);
@@ -303,6 +327,7 @@ describe("createReadTool", () => {
 
   it("errors on a missing file", async () => {
     const tool = createReadTool();
+
     await expect(
       tool.execute({ file_path: "tests/fixtures/no-such-file.txt" })
     ).rejects.toThrow(/ENOENT/);
@@ -314,6 +339,7 @@ describe("createReadTool", () => {
       maxBytes: 1024,
       maxLineChars: 80
     });
+
     expect(tool.spec.function.description).toContain("truncated to 7 lines");
     expect(tool.spec.function.description).toContain("1KB");
   });

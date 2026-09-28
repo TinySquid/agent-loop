@@ -56,6 +56,7 @@ export async function runAgent(run: AgentRun): Promise<string> {
     if (calls.length === 0) {
       // content may be string or ChatContentItems[] per the SDK; v1 handles text only
       const content = message.content ?? "";
+
       run.onEvent?.({
         type: "usage",
         usage: {
@@ -64,13 +65,16 @@ export async function runAgent(run: AgentRun): Promise<string> {
           totalTokens: totals.promptTokens + totals.completionTokens
         }
       });
+
       return typeof content === "string" ? content : "";
     }
 
     turns.push(message); // echo verbatim
+
     for (const call of calls) {
       run.onEvent?.({ type: "tool-call", round, call });
     }
+
     turns.push(...(await executeToolCalls(run.tools, calls)));
   }
   throw new Error(`agent exceeded ${maxRounds} rounds without a final answer`);
@@ -90,6 +94,7 @@ function streamToEvents(run: AgentRun): ChatChunkHandler | undefined {
  */
 function setInitialTurn(user: string, system?: string): ChatMessages[] {
   const turn: ChatMessages[] = [{ role: "user", content: user }];
+
   if (system !== undefined)
     turn.unshift({
       role: "system",

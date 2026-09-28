@@ -38,14 +38,17 @@ async function dispatch(): Promise<void> {
         tools: defaultTools,
         onEvent: command.quiet ? undefined : agentEventPrinter()
       });
+
       console.log(answer);
       return;
     }
     case "list-free-models":
       printSlugs(await fetchModels(), true);
+
       return;
     case "list-models":
       printSlugs(await fetchModels(), false);
+
       return;
   }
 }

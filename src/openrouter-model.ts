@@ -57,9 +57,12 @@ export function openRouterModel(
         if (chunk.error) {
           throw new Error(chunk.error.message);
         }
+
         chunks.push(chunk);
+
         onChunk?.(chunk.choices[0]?.delta ?? {});
       }
+
       return assembleChatStream(chunks);
     }
   };

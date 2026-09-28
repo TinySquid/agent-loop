@@ -60,6 +60,7 @@ describe("formatProviderError", () => {
 
   it("returns null when statusCode or body is missing", () => {
     expect(formatProviderError(Object.assign(new Error("x"), {}))).toBeNull();
+
     expect(
       formatProviderError(Object.assign(new Error("x"), { statusCode: 429 }))
     ).toBeNull();

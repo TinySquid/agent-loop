@@ -101,11 +101,14 @@ export function parseArgv(argv: readonly string[]): CliCommand {
       if (error.code === "commander.helpDisplayed") {
         throw new HelpRequest(program.helpInformation());
       }
+
       if (error.code === "commander.version") {
         throw new HelpRequest(`${pkg.version}\n`);
       }
+
       throw new UsageError(error.message);
     }
+
     throw error;
   }
 
@@ -117,6 +120,7 @@ export function parseArgv(argv: readonly string[]): CliCommand {
         "error: -m, --model <slug> is required when running the agent with -p, --prompt <prompt>"
       );
     }
+
     return {
       type: "run-agent",
       model: opts.model,
@@ -124,12 +128,15 @@ export function parseArgv(argv: readonly string[]): CliCommand {
       quiet: opts.quiet ?? false
     };
   }
+
   if (opts.listFreeModels) {
     return { type: "list-free-models" };
   }
+
   if (opts.listModels) {
     return { type: "list-models" };
   }
+
   throw new UsageError(
     "error: nothing to do - pass -p/--prompt with -m/--model, or a --list flag"
   );

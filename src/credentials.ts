@@ -82,11 +82,13 @@ export function resolveApiKey(env: CredentialEnv = realEnv): Credentials {
   if (envApiKey && envApiKey.length) {
     return { apiKey: envApiKey, source: "env" };
   }
+
   return loadApiKeyFromFile(env);
 }
 
 function loadApiKeyFromFile(env: CredentialEnv): Credentials {
   const locations = getAuthLocations(env);
+
   const location = locations.find((candidate) =>
     env.exists(candidate.filepath)
   );

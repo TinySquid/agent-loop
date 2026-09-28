@@ -28,7 +28,9 @@ export function formatProviderError(error: unknown): string | null {
   if (typeof error !== "object" || error === null) {
     return null;
   }
+
   const candidate = error as Partial<ProviderLikeError>;
+
   if (
     typeof candidate.statusCode !== "number" ||
     typeof candidate.body !== "string"
@@ -38,23 +40,30 @@ export function formatProviderError(error: unknown): string | null {
 
   let detail = candidate.body.trim();
   let parsed: ApiErrorEnvelope | null = null;
+
   try {
     parsed = JSON.parse(candidate.body) as ApiErrorEnvelope;
   } catch {
     parsed = null;
   }
+
   if (parsed?.error) {
     const parts: string[] = [];
+
     if (typeof parsed.error.message === "string") {
       parts.push(parsed.error.message);
     }
+
     const metadata = parsed.error.metadata;
+
     if (typeof metadata?.raw === "string") {
       parts.push(metadata.raw);
     }
+
     if (typeof metadata?.remedy_hint === "string") {
       parts.push(`remedy: ${metadata.remedy_hint}`);
     }
+
     if (parts.length > 0) {
       detail = parts.join("\n  ");
     }

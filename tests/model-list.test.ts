@@ -31,6 +31,7 @@ const API_BODY = {
 describe("fetchModels", () => {
   it("hits the models endpoint and returns the models", async () => {
     const requested: string[] = [];
+
     const env = makeEnv(async (url) => {
       requested.push(url);
       return jsonResponse(API_BODY);
@@ -56,6 +57,7 @@ describe("fetchModels", () => {
     const env = makeEnv(async () => {
       throw new Error("ECONNREFUSED");
     });
+
     await expect(fetchModels(env)).rejects.toThrow(/ECONNREFUSED/);
   });
 

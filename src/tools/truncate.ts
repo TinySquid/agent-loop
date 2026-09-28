@@ -11,8 +11,7 @@ export const DEFAULT_MAX_LINE_CHARS = 2000;
 
 /**
  * The truncation caps: the triple every bounding tool carries (lines, bytes,
- * per-line chars). A type born from a data clump, not from speculation: three
- * fields, always together, never a fourth.
+ * per-line chars).
  */
 export interface TruncationCaps {
   /** Hard line ceiling for returned output. */
@@ -23,7 +22,7 @@ export interface TruncationCaps {
   maxLineChars: number;
 }
 
-/** The production values of the caps; tool option sets spread this. */
+/** The production values of the caps (lines, bytes, per-line chars); tool option sets spread this. */
 export const TRUNCATION_CAPS: TruncationCaps = {
   maxLines: DEFAULT_MAX_LINES,
   maxBytes: DEFAULT_MAX_BYTES,
@@ -34,12 +33,13 @@ export const TRUNCATION_CAPS: TruncationCaps = {
  * The one malformed-shape rule every numeric tool argument shares: a
  * well-formed positive number is floored and kept, anything else is null and
  * the caller supplies its axis-specific fallback (a default, a cap, an
- * error). One implementation instead of three near-clones.
+ * error).
  */
 export function coercePositiveInt(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return null;
   }
+
   return Math.floor(value);
 }
 
@@ -58,12 +58,14 @@ export interface BoundOptions extends TruncationCaps {
   resumeHint?: (nextLine: number) => string;
 }
 
+/** Why a truncation occurred. */
 export type TruncationCause = "lines" | "bytes" | null;
 
+/** Bounded output result with information on any truncation event and where to continue from, if applicable. */
 export interface BoundResult {
   /** Kept lines, already per-line truncated. */
   lines: string[];
-  /** Kept lines joined; the continuation notice appended when truncated. */
+  /** Kept lines joined; the continuation notice is appended when truncated. */
   text: string;
   /** Total lines in the input window, before truncation. */
   totalLines: number;
@@ -100,11 +102,13 @@ export function boundedOutput(
   const kept: string[] = [];
   let bytes = 0;
   let truncatedBy: TruncationCause = null;
+
   for (const line of capped) {
     if (kept.length >= options.maxLines) {
       truncatedBy = "lines";
       break;
     }
+
     // +1 for the newline separating this line from the previous kept one.
     const size = Buffer.byteLength(line, "utf-8") + (kept.length > 0 ? 1 : 0);
     if (bytes + size > options.maxBytes) {
@@ -115,7 +119,9 @@ export function boundedOutput(
       kept.push(line);
       break;
     }
+
     kept.push(line);
+
     bytes += size;
   }
 
@@ -125,6 +131,7 @@ export function boundedOutput(
       : buildNotice(kept.length, totalLines, truncatedBy, options);
 
   const body = kept.join("\n");
+
   return {
     lines: kept,
     text: notice === "" ? body : `${body}\n\n${notice}`,
@@ -149,9 +156,14 @@ function buildNotice(
   const start = options.startLine ?? 1;
   const end = start + keptCount - 1;
   const total = options.totalLines ?? totalLines;
+
   const base = `[Showing lines ${start}-${end} of ${total} (${truncatedBy} limit).]`;
+
   if (!options.resumeHint) return base;
+
   const tail = options.resumeHint(end + 1);
+
   if (base.length + 1 + tail.length > MAX_NOTICE_CHARS) return base;
+
   return `${base.slice(0, -1)} ${tail}]`;
 }
