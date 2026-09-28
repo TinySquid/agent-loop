@@ -1,6 +1,6 @@
 # agent-loop
 
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D26-3c873a?style=flat-square)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.21.0-3c873a?style=flat-square)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square)](https://www.typescriptlang.org)
 [![OpenRouter](https://img.shields.io/badge/Powered%20by-OpenRouter-0762d8?style=flat-square)](https://openrouter.ai)
 
@@ -17,7 +17,7 @@ flowchart TD
         M -->|"assistant<br/>message"| A
         A -->|"assistant<br/>tool calls"| T{"Any tools<br/>requested?"}
         T -->|No| F([Final answer])
-        T -->|Yes| E["Execute tools<br/>ReadFile / Bash"]
+        T -->|Yes| E["Execute tools<br/>read / Bash"]
         E -->|"tool results"| M
     end
 
@@ -43,7 +43,7 @@ flowchart TD
 ## Features
 
 - **Agentic loop** - the model can chain tool calls over multiple rounds (up to 8 by default) until it reaches a final answer.
-- **Built-in tools** - `ReadFile` for reading file contents, `Bash` for executing shell commands.
+- **Built-in tools** - `read` for paging through file contents, `Bash` for executing shell commands; both bound their output so a runaway read or command can't flood the model.
 - **Any OpenRouter model** - run against paid or `:free` model slugs; list available ones straight from the CLI.
 - **Streaming with clean pipes** - live activity (assistant text, tool calls, token usage) is streamed to stderr; the final answer is the only thing printed to stdout, so redirects and pipes capture clean output.
 - **Flexible credentials** - OpenRouter API key via environment variable, or per-project/global YAML auth file.
@@ -51,40 +51,40 @@ flowchart TD
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) >= 26
+- [Node.js](https://nodejs.org) >= 24.21.0 (LTS)
 - An [OpenRouter API key](https://openrouter.ai/keys)
 - `bash` (used by the `Bash` tool)
 
 ## Getting started
 
-```bash
-git clone https://github.com/TinySquid/agent-loop.git agent-loop
-cd agent-loop
-npm install
-cp .env.example .env
-# edit .env and set OPENROUTER_API_KEY
-```
+1. Install the CLI globally:
+
+   ```bash
+   npm install -g agent-loop
+   ```
+
+2. Provide your OpenRouter API key:
+
+   ```bash
+   export OPENROUTER_API_KEY=sk-or-v1-...
+   ```
+
+   > [!TIP]
+   > You can also use a per-project or global `auth.yaml` file instead of the
+   > environment variable - see [API key configuration](#api-key-configuration).
 
 ## Usage
 
 ### Run the agent
 
 ```bash
-./agent.sh -p "what tools are available to you?" -m "qwen/qwen3.8-27b:free"
+agent-loop -p "what tools are available to you?" -m "qwen/qwen3.8-27b:free"
 ```
-
-`agent.sh` loads `.env` into the environment and forwards all arguments to the CLI. Without the wrapper:
-
-```bash
-npm run agent -- -p "summarize package.json" -m "qwen/qwen3.8-27b:free"
-```
-
-> npm requires the double dash (`--`) before flags.
 
 The example slug above is a free model. Use `--list-free-models` to see the current free models, or `--list-models` for non-free ones:
 
 ```bash
-./agent.sh --list-free-models
+agent-loop --list-free-models
 
 cohere/north-mini-code:free
 google/gemma-4-31b-it:free
@@ -117,7 +117,7 @@ Options:
 While the agent runs, its activity streams to stderr (dimmed when attached to a terminal):
 
 ```
-› round 1 · ReadFile(file_path=package.json)
+› round 1 · read(file_path=package.json)
 › round 2 · Bash(command=npm test)
 tokens: in 1893 · out 412
 ```
@@ -125,7 +125,7 @@ tokens: in 1893 · out 412
 The final answer is printed to stdout, so you can pipe or redirect it:
 
 ```bash
-./agent.sh -p "list the scripts in this repo" -m "google/gemma-4-31b-it:free" > scripts.txt
+agent-loop -p "list the scripts in this repo" -m "google/gemma-4-31b-it:free" > scripts.txt
 ```
 
 Use `--quiet` to suppress the live activity entirely.
@@ -138,28 +138,88 @@ The key is resolved in priority order:
 2. Workspace auth file: `.agent-loop/auth.yaml` in the current working directory
 3. Home auth file: `~/.config/agent-loop/auth.yaml`
 
+The environment variable is the simplest option:
+
+```bash
+export OPENROUTER_API_KEY=sk-or-v1-...
+```
+
 Auth files are YAML with a single `apiKey` entry:
 
 ```yaml
 apiKey: sk-or-v1-...
 ```
 
-The priority order for api key searching is `env -> working directory -> home directory`
+Place them in one of these locations:
+
+| Scope     | Path                                                                                                              |
+| --------- | ----------------------------------------------------------------------------------------------------------------- |
+| Workspace | `.agent-loop/auth.yaml` (relative to the directory you run the CLI from, e.g. `my-project/.agent-loop/auth.yaml`) |
+| Home      | `~/.config/agent-loop/auth.yaml`                                                                                  |
+
+```bash
+# per-project key:
+mkdir -p .agent-loop
+echo 'apiKey: sk-or-v1-...' > .agent-loop/auth.yaml
+
+# or a global key for all projects / fallback:
+mkdir -p ~/.config/agent-loop
+echo 'apiKey: sk-or-v1-...' > ~/.config/agent-loop/auth.yaml
+```
 
 ## Tools
 
-The agent exposes tools to the model. Tool failures are reported back to the model as error text it can act on.
+The agent exposes two tools to the model. Both bound their output through the same truncation seam: 2000 lines or 50KB per call (whichever is hit first), with lines over 2000 chars cut inline. Truncation is never silent — the model gets a continuation notice telling it what it saw and how to get more.
 
-| Tool       | Description                                                                                                             |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `ReadFile` | Read the contents of a file (UTF-8)                                                                                     |
-| `Bash`     | Execute a shell command in the current working directory. Optional `timeout_ms` parameter (default 60s, capped at 120s) |
+### read
 
-When a bash command times out, the process is killed (SIGTERM, then SIGKILL after a 1s grace period) and partial output is returned with exit code 124.
+Reads a file as UTF-8, 1-indexed line numbers prefixed to every line, with paging for large files:
+
+| Parameter   | Description                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| `file_path` | Path to the file (required; relative paths resolve to the agent's cwd) |
+| `offset`    | 1-indexed line to start from (default: line 1)                         |
+| `limit`     | Maximum number of lines to return (default/max: 2000)                  |
+
+When a read is truncated, the output ends with a notice like:
+
+```
+[Showing lines 1-2000 of 5412 (lines limit). Use offset=2001 to continue.]
+```
+
+### Bash
+
+Runs a command via `bash -c` in the agent's working directory and returns stdout/stderr:
+
+| Parameter    | Description                                            |
+| ------------ | ------------------------------------------------------ |
+| `command`    | The command to execute (required)                      |
+| `timeout_ms` | Optional maximum runtime (default 60s, capped at 120s) |
+
+Non-zero exits are returned to the model as `ERROR (Exit Code N):` followed by the captured output, so the model can read the failure and retry. On timeout the whole process group is killed (SIGTERM, then SIGKILL after a 1s grace period) and partial output is returned with exit code 124.
 
 > The `Bash` tool executes whatever the model asks for, with no permission gating.
 
 ## Development
+
+1. Clone and install:
+
+   ```bash
+   git clone https://github.com/TinySquid/agent-loop.git agent-loop
+   cd agent-loop
+   npm install
+   ```
+
+2. Copy the env template and add your OpenRouter API key:
+
+   ```bash
+   cp .env.example .env
+   # then edit .env and set OPENROUTER_API_KEY=sk-or-v1-...
+   ```
+
+   The `agent.sh` wrapper (see [Running the CLI locally](#running-the-cli-locally)) loads this file automatically.
+
+### Scripts
 
 ```bash
 npm run typecheck    # tsc --noEmit
@@ -178,19 +238,18 @@ npm run build
 npm link
 ```
 
-### Project structure
+### Running the CLI locally
 
+During development, run the CLI without building via the `agent.sh` wrapper:
+
+```bash
+./agent.sh -p "what tools are available to you?" -m "qwen/qwen3.8-27b:free"
 ```
-src/
-├── cli.ts              # entry point: arg dispatch, event printing, exit codes
-├── parse-args.ts       # CLI parsing (commander)
-├── agent.ts            # the agent loop itself
-├── tools.ts            # tool contracts + ReadFile/Bash implementations
-├── tool-execution.ts   # model tool calls in → one tool-result message per call
-├── chat-model.ts       # ChatModel seam used by the loop
-├── openrouter-model.ts # production ChatModel adapter (OpenRouter SDK)
-├── chat-stream.ts      # streamed completion reassembly
-├── model-list.ts       # OpenRouter model list fetching + free-model detection
-├── credentials.ts      # API key resolution (env → workspace → home)
-└── provider-error.ts   # readable formatting for OpenRouter API errors
+
+`agent.sh` loads the repo-local `.env` file into the environment and forwards all arguments to the CLI. Without the wrapper:
+
+```bash
+npm run agent -- -p "summarize package.json" -m "qwen/qwen3.8-27b:free"
 ```
+
+> npm requires the double dash (`--`) before flags.
