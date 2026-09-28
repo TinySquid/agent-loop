@@ -1,6 +1,6 @@
 {
   "name": "@tinysquid/agent-loop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Terminal agent loop powered by OpenRouter",
   "private": false,
   "repository": {
