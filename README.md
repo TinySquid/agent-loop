@@ -60,7 +60,7 @@ flowchart TD
 1. Install the CLI globally:
 
    ```bash
-   npm install -g agent-loop
+   npm install -g @tinysquid/agent-loop
    ```
 
 2. Provide your OpenRouter API key:
