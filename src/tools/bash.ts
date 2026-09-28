@@ -60,6 +60,7 @@ export function deriveTimeout(
  */
 export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
   const settings = { ...DEFAULT_BASH_OPTIONS, ...options };
+
   const bound = (raw: string): string =>
     boundedOutput(raw, {
       maxLines: settings.maxLines,
@@ -67,6 +68,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
       maxLineChars: settings.maxLineChars
       // no resumeHint: a finished command's output is not pageable
     }).text;
+
   return {
     spec: {
       type: "function",
@@ -88,7 +90,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
             },
             timeout_ms: {
               type: "integer",
-              description: `Optional maximum runtime in milliseconds (default ${options.defaultMs}, capped at ${options.capMs}). On timeout the process is killed and partial output is returned with exit code 124.`
+              description: `Optional maximum runtime in milliseconds (default ${settings.defaultMs}, capped at ${settings.capMs}). On timeout the process is killed and partial output is returned with exit code 124.`
             }
           }
         }
@@ -107,6 +109,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
 
       let stdout = "";
       let stderr = "";
+
       child.stdout.on("data", (chunk: Buffer) => {
         stdout += chunk.toString("utf-8");
       });
@@ -123,6 +126,7 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
           // Negative pid targets the child's process group (it is the group
           // leader, thanks to detached).
           if (child.pid === undefined) return;
+
           try {
             process.kill(-child.pid, signal);
           } catch {
@@ -132,14 +136,18 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
 
         const finish = (value: string) => {
           if (settled) return;
+
           settled = true;
           clearTimeout(timeoutTimer);
+
           if (sigkillTimer) clearTimeout(sigkillTimer);
+
           resolve(value);
         };
 
         const timeoutTimer = setTimeout(() => {
           killTree("SIGTERM");
+
           sigkillTimer = setTimeout(
             () => killTree("SIGKILL"),
             settings.sigkillGraceMs
@@ -157,16 +165,18 @@ export function createBashTool(options: Partial<BashToolOptions> = {}): Tool {
                 `ERROR (Exit Code 124, command timed out after ${timeoutMs}ms and was killed by ${signal}):\n${stdout}\n${stderr}`.trim()
               )
             );
-          } else {
-            const exitCode = code ?? 1;
-            finish(
-              bound(
-                exitCode === 0
-                  ? stdout
-                  : `ERROR (Exit Code ${exitCode}):\n${stdout}\n${stderr}`.trim()
-              )
-            );
+
+            return;
           }
+
+          const exitCode = code ?? 1;
+
+          const body =
+            exitCode === 0
+              ? stdout
+              : `ERROR (Exit Code ${exitCode}):\n${stdout}\n${stderr}`.trim();
+
+          finish(bound(body));
         });
       });
     }
